@@ -30,8 +30,8 @@ class SimulationParams:
     """Initial annual withdrawal amount in dollars."""
 
     # Return assumptions
-    mean_return: float = 0.07
-    """Expected annualized nominal investment return (e.g. 0.07 = 7 %)."""
+    mean_return: float = 0.065
+    """Expected annualized nominal investment return (e.g. 0.065 = 6.5 %)."""
 
     return_std: float = 0.12
     """Standard deviation of annual nominal returns (e.g. 0.12 = 12 %)."""
