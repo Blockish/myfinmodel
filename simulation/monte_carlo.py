@@ -32,8 +32,13 @@ class MonteCarloSimulator:
 
     def run(self) -> SimulationSummary:
         """Execute all simulation paths and return an aggregated summary."""
-        rng = np.random.default_rng(self.params.random_seed)
         p = self.params
+        if p.years <= 0:
+            raise ValueError(f"years must be > 0, got {p.years}")
+        if p.num_simulations <= 0:
+            raise ValueError(f"num_simulations must be > 0, got {p.num_simulations}")
+
+        rng = np.random.default_rng(p.random_seed)
 
         # Pre-generate return and inflation matrices:
         # shape (num_simulations, years)
@@ -136,13 +141,21 @@ class MonteCarloSimulator:
                 return spending
             # Adjust for inflation first
             inflation_adjusted = spending * (1.0 + inflation)
-            if portfolio <= 0:
+            if inflation_adjusted <= 0 or portfolio <= 0:
                 return 0.0
+            # Compute starting portfolio-to-spending ratio as the reference baseline
+            initial_ratio = (
+                p.initial_portfolio / p.annual_spending
+                if p.annual_spending > 0
+                else 0.0
+            )
             ratio = portfolio / inflation_adjusted
-            if ratio > p.upper_guardrail_pct:
+            upper_threshold = initial_ratio * p.upper_guardrail_pct
+            lower_threshold = initial_ratio * p.lower_guardrail_pct
+            if ratio > upper_threshold:
                 # Portfolio doing well – allow a modest spending increase
                 new_spending = inflation_adjusted * (1.0 + p.upper_guardrail)
-            elif ratio < p.lower_guardrail_pct:
+            elif ratio < lower_threshold:
                 # Portfolio under stress – reduce spending
                 new_spending = inflation_adjusted * (1.0 - p.lower_guardrail)
             else:

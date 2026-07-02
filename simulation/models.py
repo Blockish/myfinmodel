@@ -51,7 +51,7 @@ class SimulationParams:
     num_simulations: int = 1_000
     """Number of Monte Carlo paths to generate."""
 
-    random_seed: Optional[int] = None
+    random_seed: Optional[int] = 42
     """Optional random seed for reproducibility."""
 
     # Guardrail model
@@ -66,10 +66,14 @@ class SimulationParams:
     """Decrease spending by this fraction when portfolio falls below lower threshold."""
 
     upper_guardrail_pct: float = 1.20
-    """Portfolio-to-spending ratio above which the upper guardrail triggers."""
+    """Multiplier applied to the starting portfolio-to-spending ratio above which the upper guardrail triggers.
+    For example, 1.20 means the guardrail fires when the current portfolio/spending ratio exceeds
+    120% of the initial portfolio-to-spending ratio."""
 
     lower_guardrail_pct: float = 0.80
-    """Portfolio-to-spending ratio below which the lower guardrail triggers."""
+    """Multiplier applied to the starting portfolio-to-spending ratio below which the lower guardrail triggers.
+    For example, 0.80 means the guardrail fires when the current portfolio/spending ratio falls below
+    80% of the initial portfolio-to-spending ratio."""
 
     def withdrawal_rate(self) -> float:
         """Return the initial withdrawal rate as a percentage."""
@@ -149,21 +153,28 @@ class SimulationSummary:
     @property
     def median_final_value(self) -> float:
         finals = [r.final_value for r in self.results]
+        if not finals:
+            return 0.0
         return float(np.median(finals))
 
     @property
     def mean_final_value(self) -> float:
         finals = [r.final_value for r in self.results]
+        if not finals:
+            return 0.0
         return float(np.mean(finals))
 
-    def percentile_paths(self, percentiles: list[int] = None) -> dict[int, list[float]]:
+    def percentile_paths(self, percentiles: list[int] | None = None) -> dict[int, list[float]]:
         """Return portfolio-value arrays at the requested percentiles across years.
 
         Keys are percentile integers (e.g. 10, 25, 50, 75, 90).
         Each value is a list of length ``params.years + 1``.
+        Returns an empty dict when there are no simulation results.
         """
         if percentiles is None:
             percentiles = [10, 25, 50, 75, 90]
+        if not self.results:
+            return {}
         # Shape: (num_paths, years+1)
         matrix = np.array([r.portfolio_values for r in self.results])
         return {

@@ -138,16 +138,18 @@ def render_inputs() -> SimulationParams | None:
             if guardrail_model == GuardrailModel.GUARDRAILS_DYNAMIC.value:
                 st.markdown("**Dynamic Guardrail Thresholds**")
                 upper_pct = st.number_input(
-                    "Upper guardrail ratio (portfolio / spending)",
+                    "Upper guardrail threshold (multiplier of starting portfolio/spending ratio)",
                     min_value=1.0, max_value=5.0,
                     value=st.session_state.get("input_upper_guardrail_pct", 1.20),
                     step=0.05,
+                    help="Spending increases when the current portfolio/spending ratio exceeds this multiplier × the starting ratio (e.g. 1.20 = 120% of initial ratio).",
                 )
                 lower_pct = st.number_input(
-                    "Lower guardrail ratio (portfolio / spending)",
+                    "Lower guardrail threshold (multiplier of starting portfolio/spending ratio)",
                     min_value=0.1, max_value=1.5,
                     value=st.session_state.get("input_lower_guardrail_pct", 0.80),
                     step=0.05,
+                    help="Spending is cut when the current portfolio/spending ratio falls below this multiplier × the starting ratio (e.g. 0.80 = 80% of initial ratio).",
                 )
                 upper_adj = st.number_input(
                     "Spending increase when above upper guardrail (%)",
