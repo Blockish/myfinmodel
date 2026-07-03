@@ -14,7 +14,8 @@ from typing import Iterable
 
 APP_NAME = "MyFinModel"
 PREFERRED_PORT = 8501
-FALLBACK_PORTS = range(8502, 8511)
+MAX_PORT = 8510
+FALLBACK_PORTS = range(8502, MAX_PORT + 1)
 STARTUP_TIMEOUT_SECONDS = 20
 POLL_INTERVAL_SECONDS = 0.25
 
@@ -54,7 +55,6 @@ def _iterate_candidate_ports() -> Iterable[int]:
 
 def _is_port_available(port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return sock.connect_ex(("127.0.0.1", port)) != 0
 
 
@@ -62,7 +62,9 @@ def _select_port() -> int:
     for port in _iterate_candidate_ports():
         if _is_port_available(port):
             return port
-    raise RuntimeError("No available local port found from 8501 through 8510.")
+    raise RuntimeError(
+        f"No available local port found from {PREFERRED_PORT} through {MAX_PORT}."
+    )
 
 
 def _repository_root() -> Path:
@@ -96,10 +98,8 @@ def _run_streamlit(app_path: str, port: int) -> None:
         "streamlit",
         "run",
         app_path,
-        "--server.headless",
-        "true",
-        "--browser.gatherUsageStats",
-        "false",
+        "--server.headless=true",
+        "--browser.gatherUsageStats=false",
         "--server.port",
         str(port),
     ]
