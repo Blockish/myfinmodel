@@ -100,6 +100,8 @@ def _run_streamlit(app_path: str, port: int) -> None:
         app_path,
         "--server.headless=true",
         "--browser.gatherUsageStats=false",
+        "--server.address",
+        "127.0.0.1",
         "--server.port",
         str(port),
     ]
