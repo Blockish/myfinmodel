@@ -29,7 +29,7 @@ Copy-Item (Join-Path $launcherDist "_internal") $distRoot -Recurse
 Copy-Item (Join-Path $repoRoot "packaging/launch_myfinmodel.bat") $distRoot
 Copy-Item (Join-Path $repoRoot "packaging/README-Run.txt") $distRoot
 
-Set-Content -Path (Join-Path $distRoot "VERSION.txt") -Value $Version -NoNewline
+Set-Content -Path (Join-Path $distRoot "VERSION.txt") -Value $Version
 
 Write-Host "[4/5] Creating portable zip artifact..."
 $zipName = "MyFinModel-v$Version-portable.zip"

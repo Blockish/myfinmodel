@@ -66,6 +66,7 @@ exe = EXE(
     upx=False,
     upx_exclude=[],
     runtime_tmpdir=None,
+    # Keep launcher windowless for double-click user flow; failures are logged to launcher.log.
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,

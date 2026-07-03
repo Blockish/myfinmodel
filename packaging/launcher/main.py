@@ -47,7 +47,7 @@ def _configure_logger() -> logging.Logger:
     return logger
 
 
-def _candidate_ports() -> Iterable[int]:
+def _iterate_candidate_ports() -> Iterable[int]:
     yield PREFERRED_PORT
     yield from FALLBACK_PORTS
 
@@ -59,7 +59,7 @@ def _is_port_available(port: int) -> bool:
 
 
 def _select_port() -> int:
-    for port in _candidate_ports():
+    for port in _iterate_candidate_ports():
         if _is_port_available(port):
             return port
     raise RuntimeError("No available local port found from 8501 through 8510.")
@@ -67,6 +67,7 @@ def _select_port() -> int:
 
 def _repository_root() -> Path:
     if getattr(sys, "frozen", False):
+        # PyInstaller one-dir uses _MEIPASS; fallback to executable folder when unavailable.
         return Path(getattr(sys, "_MEIPASS", Path(sys.executable).resolve().parent))
     return Path(__file__).resolve().parents[2]
 
