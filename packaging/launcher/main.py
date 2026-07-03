@@ -24,7 +24,7 @@ def _logs_dir() -> Path:
     local_app_data = os.environ.get("LOCALAPPDATA")
     if local_app_data:
         return Path(local_app_data) / APP_NAME / "logs"
-    return Path.home() / ".local" / "share" / APP_NAME / "logs"
+    return Path.home() / "AppData" / "Local" / APP_NAME / "logs"
 
 
 def _configure_logger() -> logging.Logger:
@@ -133,7 +133,7 @@ def main() -> int:
         return 1
 
     if not _wait_for_port(port, STARTUP_TIMEOUT_SECONDS):
-        logger.error("Streamlit did not start within timeout (%ss).", STARTUP_TIMEOUT_SECONDS)
+        logger.error("Streamlit did not start within timeout (%ds).", STARTUP_TIMEOUT_SECONDS)
         streamlit_process.terminate()
         streamlit_process.join(timeout=3)
         print(f"{APP_NAME} failed to start. See launcher log for details.")
