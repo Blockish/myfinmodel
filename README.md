@@ -26,10 +26,10 @@ python -m pytest tests/ -v
 
 Portable packaging assets are located in:
 
-- `/home/runner/work/myfinmodel/myfinmodel/packaging/launcher/`
-- `/home/runner/work/myfinmodel/myfinmodel/packaging/launch_myfinmodel.bat`
-- `/home/runner/work/myfinmodel/myfinmodel/packaging/myfinmodel.spec`
-- `/home/runner/work/myfinmodel/myfinmodel/packaging/build_portable.ps1`
+- `packaging/launcher/`
+- `packaging/launch_myfinmodel.bat`
+- `packaging/myfinmodel.spec`
+- `packaging/build_portable.ps1`
 
 On Windows, build a portable zip artifact with:
 

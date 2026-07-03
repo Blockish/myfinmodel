@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import multiprocessing
+import os
 import socket
 import sys
 import time
@@ -19,8 +20,10 @@ POLL_INTERVAL_SECONDS = 0.25
 
 
 def _logs_dir() -> Path:
-    local_app_data = Path.home() / "AppData" / "Local"
-    return local_app_data / APP_NAME / "logs"
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        return Path(local_app_data) / APP_NAME / "logs"
+    return Path.home() / ".local" / "share" / APP_NAME / "logs"
 
 
 def _configure_logger() -> logging.Logger:
