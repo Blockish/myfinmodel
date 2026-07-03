@@ -160,8 +160,9 @@ Purpose:
 Use PyInstaller in **onedir** mode as the default packaging strategy.
 
 ```powershell
+# If needed, re-activate the build venv: .\.venv-build\Scripts\Activate.ps1
 pip install pyinstaller
-pyinstaller --noconfirm --clean --onedir --name MyFinModelLauncher packaging\launch_streamlit.py
+pyinstaller --noconfirm --clean --onedir --noconsole --name MyFinModelLauncher packaging\launch_streamlit.py
 ```
 
 Rationale:
