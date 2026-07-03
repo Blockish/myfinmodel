@@ -8,3 +8,4 @@ MyFinModel Portable (Zip) - Quick Start
 Notes:
 - Keep the entire extracted folder together (including _internal).
 - If startup fails, re-extract the zip and try again.
+- Launcher log path: %LOCALAPPDATA%\MyFinModel\logs\launcher.log

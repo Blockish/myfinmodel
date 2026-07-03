@@ -62,7 +62,7 @@ def _select_port() -> int:
     for port in _candidate_ports():
         if _is_port_available(port):
             return port
-    raise RuntimeError("No available local port found in 8501-8510.")
+    raise RuntimeError("No available local port found from 8501 through 8510.")
 
 
 def _repository_root() -> Path:
