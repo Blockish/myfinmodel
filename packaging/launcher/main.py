@@ -112,13 +112,22 @@ def main() -> int:
     multiprocessing.freeze_support()
     logger = _configure_logger()
 
+    def _notify_user(message: str) -> None:
+        """Best-effort user-visible error for windowless launcher builds."""
+        try:
+            import ctypes  # type: ignore[attr-defined]
+
+            ctypes.windll.user32.MessageBoxW(0, message, APP_NAME, 0x10)
+        except Exception:
+            print(message)
+
     try:
         app_path = _resolve_app_path()
         port = _select_port()
         logger.info("Selected local port: %s", port)
     except Exception as exc:
         logger.exception("Failed during launcher setup: %s", exc)
-        print(f"{APP_NAME} failed to start: {exc}")
+        _notify_user(f"{APP_NAME} failed to start: {exc}")
         return 1
 
     streamlit_process = multiprocessing.Process(
@@ -131,17 +140,17 @@ def main() -> int:
         streamlit_process.start()
     except Exception as exc:
         logger.exception("Failed to start Streamlit process: %s", exc)
-        print(f"{APP_NAME} failed to start: {exc}")
+        _notify_user(f"{APP_NAME} failed to start: {exc}")
         return 1
 
     if not _wait_for_port(port, STARTUP_TIMEOUT_SECONDS):
         logger.error("Streamlit did not start within timeout (%ds).", STARTUP_TIMEOUT_SECONDS)
         streamlit_process.terminate()
         streamlit_process.join(timeout=3)
-        print(f"{APP_NAME} failed to start. See launcher log for details.")
+        _notify_user(f"{APP_NAME} failed to start. See launcher log for details.")
         return 1
 
-    url = f"http://localhost:{port}"
+    url = f"http://127.0.0.1:{port}"
     logger.info("Opening browser at %s", url)
     webbrowser.open(url)
 

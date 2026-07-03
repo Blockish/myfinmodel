@@ -1,6 +1,6 @@
 # myfinmodel
 
-Python app for modeling financial modeling for retirement spending and stress testing.
+Python app for modeling retirement spending and stress testing.
 
 ## Development
 

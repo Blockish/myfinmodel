@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-BASE_DIR = Path.cwd()
+BASE_DIR = Path(__file__).resolve().parents[1]
 
 
 def collect_tree(source_dir: str, destination_root: str) -> list[tuple[str, str]]:
