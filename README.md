@@ -7,19 +7,19 @@ Python app for modeling retirement spending and stress testing.
 Install dependencies:
 
 ```bash
-python -m pip install -r requirements.txt
+uv sync --group dev
 ```
 
 Run the Streamlit app:
 
 ```bash
-streamlit run app.py
+uv run streamlit run app.py
 ```
 
 Run tests:
 
 ```bash
-python -m pytest tests/ -v
+uv run pytest tests/ -v
 ```
 
 ## Portable folder distribution (zip, no installer)

@@ -7,13 +7,15 @@ $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path "$PSScriptRoot/..").Path
 Set-Location $repoRoot
 
+if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
+    throw "uv is required to build this project. Install from https://docs.astral.sh/uv/"
+}
+
 Write-Host "[1/5] Installing build dependencies..."
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python -m pip install pyinstaller
+uv sync --frozen --group dev
 
 Write-Host "[2/5] Building launcher executable..."
-python -m PyInstaller --noconfirm --clean packaging/myfinmodel.spec
+uv run pyinstaller --noconfirm --clean packaging/myfinmodel.spec
 
 $distRoot = Join-Path $repoRoot "dist/MyFinModel"
 $launcherDist = Join-Path $repoRoot "dist/MyFinModelLauncher"

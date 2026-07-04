@@ -49,6 +49,7 @@ Current repo assumptions:
 
 - App entrypoint is `app.py`
 - App is launched in development with `streamlit run app.py`
+- Dependencies are managed with `uv` project mode (`pyproject.toml` + `uv.lock`)
 - Core dependencies include Streamlit, Plotly, Pandas, NumPy, SciPy, and OpenPyXL
 - The browser-based UI is acceptable as long as launch/setup feels like a local app
 
@@ -86,21 +87,24 @@ The packaging spec should assume a repo structure like:
 
 ```text
 packaging/
-  launch_streamlit.py
+  build_portable.ps1
   launch_myfinmodel.bat
   myfinmodel.spec
-  build_windows.ps1
-  inno/
-    MyFinModel.iss
+  README-Run.txt
+  launcher/
+    __init__.py
+    __main__.py
+    main.py
 ```
 
 Expected purpose of each file:
 
-- `launch_streamlit.py`: primary launcher wrapper that starts Streamlit and opens the browser
+- `build_portable.ps1`: repeatable local build script for the portable packaging flow
 - `launch_myfinmodel.bat`: double-clickable entry point for portable distribution
 - `myfinmodel.spec`: reproducible PyInstaller configuration
-- `build_windows.ps1`: repeatable local build script for the packaging flow
-- `inno/MyFinModel.iss`: installer definition for installer-style releases
+- `README-Run.txt`: end-user run instructions included in packaged artifacts
+- `launcher/main.py`: primary launcher wrapper that starts Streamlit and opens the browser
+- `launcher/__main__.py`: package entrypoint used by PyInstaller
 
 ---
 
@@ -111,11 +115,14 @@ Expected purpose of each file:
 Before packaging, confirm the existing app works in a clean environment.
 
 ```powershell
-python -m venv .venv-build
-.\.venv-build\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-streamlit run app.py
+uv sync --group dev
+uv run streamlit run app.py
+```
+
+Optional local configuration file:
+
+```powershell
+uv run --env-file .env streamlit run app.py
 ```
 
 Validation goal:
@@ -126,7 +133,7 @@ Validation goal:
 
 ### Step 2: Add the launcher wrapper
 
-Create `packaging/launch_streamlit.py` as the launcher responsible for:
+Create and maintain `packaging/launcher/main.py` as the launcher responsible for:
 
 1. Resolving the correct path to `app.py`
 2. Detecting packaged versus development execution
@@ -160,9 +167,8 @@ Purpose:
 Use PyInstaller in **onedir** mode as the default packaging strategy.
 
 ```powershell
-# If needed, re-activate the build venv: .\.venv-build\Scripts\Activate.ps1
-pip install pyinstaller
-pyinstaller --noconfirm --clean --onedir --noconsole --name MyFinModelLauncher packaging\launch_streamlit.py
+uv sync --frozen --group dev
+uv run pyinstaller --noconfirm --clean packaging\myfinmodel.spec
 ```
 
 Rationale:
@@ -200,6 +206,8 @@ Portable artifact name:
 ### Step 6: Build the installer-style release
 
 After the portable flow is working, build the installer version with Inno Setup.
+
+Note: Inno Setup assets are optional and may be added in a later phase if installer distribution is enabled.
 
 Installer responsibilities:
 
@@ -353,6 +361,13 @@ The spec is satisfied when:
 - Keep logs minimal and free of sensitive financial inputs
 - Expect some unsigned executables to trigger antivirus warnings on some systems
 - Consider code-signing for wider distribution
+
+### Environment variable policy
+
+- No runtime environment variables are required for core app behavior at this time
+- Launcher logging uses `%LOCALAPPDATA%\MyFinModel\logs` when available
+- Keep `.env` out of source control; use it only for local/developer overrides
+- Prefer `uv run --env-file .env <command>` when local environment overrides are needed
 
 ---
 

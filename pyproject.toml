@@ -1,0 +1,23 @@
+[project]
+name = "myfinmodel"
+version = "0.1.0"
+description = "Monte Carlo retirement spending model Streamlit app"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "streamlit>=1.35.0",
+  "numpy>=1.26.0",
+  "pandas>=2.2.0",
+  "plotly>=5.22.0",
+  "scipy>=1.13.0",
+  "openpyxl>=3.1.0",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0.0",
+  "pyinstaller>=6.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
