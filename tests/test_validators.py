@@ -161,7 +161,7 @@ class TestSpendingValidation:
         inputs = SimulationInputs(port_start=1_000_000.0, spending_tiers=tiers)
         result = validate_inputs(inputs)
         assert not result.valid
-        assert any("tier" in err.lower() for err in result.errors)
+        assert any("overlap" in err.lower() for err in result.errors)
 
     def test_pass_valid_tiers(self):
         """B2: Pass with valid contiguous tiers."""
