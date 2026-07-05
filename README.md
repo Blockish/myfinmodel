@@ -4,7 +4,7 @@ Python app for modeling retirement spending and stress testing.
 
 ## Development
 
-Install dependencies:
+Install dependencies (requires `uv`: https://docs.astral.sh/uv/):
 
 ```bash
 uv sync --group dev
