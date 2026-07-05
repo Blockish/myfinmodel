@@ -134,8 +134,8 @@ class TestSpendingValidation:
         ]
         inputs = SimulationInputs(port_start=1_000_000.0, spending_tiers=tiers)
         result = validate_inputs(inputs)
-        # This is actually a gap at 76 onwards to plan horizon, but let's check
-        # that tiers must cover the full horizon
+        assert not result.valid
+        assert any("tier" in err.lower() for err in result.errors)
 
     def test_pass_valid_tiers(self):
         """B2: Pass with valid contiguous tiers."""

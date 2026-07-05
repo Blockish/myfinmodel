@@ -7,9 +7,130 @@ during simulation do not accidentally affect cached inputs or cause state leaks.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Optional
 
 import numpy as np
+
+
+class GuardrailModel(str, Enum):
+    """Supported withdrawal guardrail models (legacy API compatibility)."""
+
+    INFLATION_ADJUSTED = "Inflation-Adjusted"
+    NOMINAL_FIXED = "Nominal Fixed"
+    GUARDRAILS_DYNAMIC = "Guardrails (Dynamic)"
+
+
+@dataclass
+class SimulationParams:
+    """Legacy simulation input model kept for Phase 1 compatibility."""
+
+    initial_portfolio: float = 1_000_000.0
+    annual_spending: float = 40_000.0
+    mean_return: float = 0.065
+    return_std: float = 0.12
+    mean_inflation: float = 0.03
+    inflation_std: float = 0.01
+    years: int = 30
+    num_simulations: int = 1_000
+    random_seed: Optional[int] = 42
+    guardrail_model: GuardrailModel = GuardrailModel.INFLATION_ADJUSTED
+    upper_guardrail: float = 0.20
+    lower_guardrail: float = 0.20
+    upper_guardrail_pct: float = 1.20
+    lower_guardrail_pct: float = 0.80
+
+    def withdrawal_rate(self) -> float:
+        """Return the initial withdrawal rate as a percentage."""
+        if self.initial_portfolio > 0:
+            return self.annual_spending / self.initial_portfolio
+        return 0.0
+
+
+@dataclass
+class SimulationResult:
+    """Legacy per-path simulation result kept for Phase 1 compatibility."""
+
+    path_id: int
+    portfolio_values: list[float]
+    annual_spending: list[float]
+    success: bool
+    depletion_year: Optional[int] = None
+
+    @property
+    def final_value(self) -> float:
+        return self.portfolio_values[-1]
+
+    @property
+    def peak_value(self) -> float:
+        return max(self.portfolio_values)
+
+    @property
+    def trough_value(self) -> float:
+        return min(self.portfolio_values)
+
+
+@dataclass
+class SimulationSummary:
+    """Legacy aggregate simulation summary kept for Phase 1 compatibility."""
+
+    params: SimulationParams
+    results: list[SimulationResult]
+
+    @property
+    def num_paths(self) -> int:
+        return len(self.results)
+
+    @property
+    def success_rate(self) -> float:
+        if not self.results:
+            return 0.0
+        return sum(r.success for r in self.results) / len(self.results)
+
+    @property
+    def success_count(self) -> int:
+        return sum(r.success for r in self.results)
+
+    @property
+    def failure_count(self) -> int:
+        return self.num_paths - self.success_count
+
+    @property
+    def median_final_value(self) -> float:
+        finals = [r.final_value for r in self.results]
+        if not finals:
+            return 0.0
+        return float(np.median(finals))
+
+    @property
+    def mean_final_value(self) -> float:
+        finals = [r.final_value for r in self.results]
+        if not finals:
+            return 0.0
+        return float(np.mean(finals))
+
+    def percentile_paths(self, percentiles: list[int] | None = None) -> dict[int, list[float]]:
+        """Return portfolio values across years at requested percentiles.
+
+        Each list has length ``params.years + 1`` because it includes year 0.
+        """
+        if percentiles is None:
+            percentiles = [10, 25, 50, 75, 90]
+        if not self.results:
+            return {}
+        matrix = np.array([r.portfolio_values for r in self.results])
+        return {
+            p: np.percentile(matrix, p, axis=0).tolist()
+            for p in percentiles
+        }
+
+    def depletion_year_distribution(self) -> dict[int, int]:
+        """Return count of failed paths by depletion year."""
+        dist: dict[int, int] = {}
+        for r in self.results:
+            if not r.success and r.depletion_year is not None:
+                dist[r.depletion_year] = dist.get(r.depletion_year, 0) + 1
+        return dist
 
 
 @dataclass
@@ -316,7 +437,7 @@ class SimulationResults:
         Returns
         -------
         dict[int, list[float]]
-            Mapping of percentile → list of portfolio values (length plan_years+1).
+            Mapping of percentile → list of portfolio values (length plan_years).
             Empty dict if no results.
         """
         if percentiles is None:

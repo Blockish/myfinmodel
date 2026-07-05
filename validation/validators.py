@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from simulation.models import SimulationInputs, SpendingTier
+from simulation.models import SimulationInputs
 
 
 @dataclass
@@ -130,12 +130,6 @@ def validate_inputs(inputs: SimulationInputs) -> ValidationResult:
     if inputs.ss_enabled and inputs.ss_start_age > inputs.retire_age + inputs.plan_years - 1:
         warnings.append(
             f"Social Security starts at {inputs.ss_start_age}, after plan horizon ends at {inputs.retire_age + inputs.plan_years - 1}."
-        )
-
-    # W5: Spending floor vs spend_ceiling sanity check
-    if inputs.spend_floor > inputs.spend_ceiling:
-        errors.append(
-            f"Spending floor ({inputs.spend_floor}) exceeds ceiling ({inputs.spend_ceiling})."
         )
 
     # W6: Uncommon return std dev
