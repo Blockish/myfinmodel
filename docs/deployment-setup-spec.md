@@ -115,7 +115,7 @@ Expected purpose of each file:
 Before packaging, confirm the existing app works in a clean environment.
 
 ```powershell
-uv sync --group dev
+uv sync --frozen --group dev
 uv run streamlit run app.py
 ```
 
