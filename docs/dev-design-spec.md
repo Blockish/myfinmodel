@@ -546,11 +546,12 @@ def run_simulation(inputs: SimulationInputs) -> dict:
 
 Key vectorization pattern:
 ```python
+cum_inf_vec = np.ones(n_paths, dtype=float)
 for y in range(plan_years):
     age = retire_age + y
     ret_vec = ret_draws[:, y]          # shape (n_paths,)
     inf_vec = inf_draws[:, y]          # shape (n_paths,)
-    cum_inf_vec = np.cumprod(...)      # shape (n_paths,)
+    cum_inf_vec *= (1.0 + inf_vec)     # running compounded inflation; shape (n_paths,)
 
     # All guardrail + portfolio ops use np.where on vectors
     spend_vec = apply_guardrails(spend_vec, portfolio_vec, ...)
@@ -664,12 +665,12 @@ Since the current scaffold is small and the spec requires near-total rewrite of 
 - `ui/outputs.py` — complete rewrite
 - `utils/charts.py` — complete rewrite
 - `app.py` — significant restructure
+- `tests/test_models.py` — rewrite for new model structure
 
 ### 7.5 Files to Remove (After Migration)
 
 - `simulation/monte_carlo.py`
 - `tests/test_monte_carlo.py`
-- `tests/test_models.py` (replaced by new version)
 
 ---
 
