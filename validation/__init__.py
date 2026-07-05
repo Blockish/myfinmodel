@@ -1,6 +1,6 @@
 """Input validation for Monte Carlo simulation.
 
-This module provides zero-dependency validation for SimulationInputs,
+This module provides validation for SimulationInputs
 with no Streamlit imports to ensure portability.
 """
 

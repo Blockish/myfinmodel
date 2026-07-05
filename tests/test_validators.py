@@ -150,7 +150,7 @@ class TestSpendingValidation:
         inputs = SimulationInputs(port_start=1_000_000.0, spending_tiers=tiers)
         result = validate_inputs(inputs)
         assert not result.valid
-        assert any("gap" in err.lower() or "contiguou" in err.lower() for err in result.errors)
+        assert any("no spending tier covers ages" in err.lower() for err in result.errors)
 
     def test_block_tier_overlap(self):
         """B2: Spending tiers cannot overlap."""
@@ -301,6 +301,21 @@ class TestACAValidation:
 
 class TestSimulationSettingsValidation:
     """Tests for simulation settings validation."""
+
+    def test_block_plan_years_too_low(self):
+        """B2: plan_years must be >= 1."""
+        inputs = SimulationInputs(port_start=1_000_000.0, plan_years=0)
+        result = validate_inputs(inputs)
+        assert not result.valid
+        assert any("plan_years" in err.lower() and ">= 1" in err for err in result.errors)
+
+    def test_plan_years_guard_skips_tier_horizon_math_when_invalid(self):
+        """Invalid horizon should produce plan_years BLOCK without tier-range artifact."""
+        inputs = SimulationInputs(port_start=1_000_000.0, plan_years=0, spending_tiers=[])
+        result = validate_inputs(inputs)
+        assert not result.valid
+        assert any("plan_years" in err.lower() for err in result.errors)
+        assert not any("no spending tier covers ages [65] to [64]" in err.lower() for err in result.errors)
 
     def test_block_n_paths_too_low(self):
         """B8: n_paths must be >= 100."""

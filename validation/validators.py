@@ -67,23 +67,28 @@ def validate_inputs(inputs: SimulationInputs) -> ValidationResult:
     if inputs.port_start <= 0:
         errors.append(f"Portfolio start ({inputs.port_start}) must be > 0.")
 
-    # B2: Spending tiers must cover horizon contiguously
-    errors.extend(_check_tier_contiguity(inputs))
+    # B2: Plan horizon must be valid
+    if inputs.plan_years < 1:
+        errors.append(f"Plan horizon (plan_years={inputs.plan_years}) must be >= 1.")
 
-    # B3: Spending floor must be >= 0
+    # B3: Spending tiers must cover horizon contiguously
+    if inputs.plan_years >= 1:
+        errors.extend(_check_tier_contiguity(inputs))
+
+    # B4: Spending floor must be >= 0
     if inputs.spend_floor < 0:
         errors.append(f"Spending floor ({inputs.spend_floor}) cannot be negative.")
 
-    # B4: Spending ceiling must be > floor
+    # B5: Spending ceiling must be > floor
     if inputs.spend_ceiling <= inputs.spend_floor:
         errors.append(
             f"Spending floor ({inputs.spend_floor}) must be less than ceiling ({inputs.spend_ceiling})."
         )
 
-    # B5: GR2 thresholds must be ordered: low_rate < warn_rate < crit_rate
+    # B6: GR2 thresholds must be ordered: low_rate < warn_rate < crit_rate
     errors.extend(_check_gr2_ordering(inputs))
 
-    # B6: Covariance validity for bivariate draw matrix
+    # B7: Covariance validity for bivariate draw matrix
     if abs(inputs.ret_inf_corr) >= 1:
         errors.append(
             f"Return–inflation correlation ({inputs.ret_inf_corr}) must satisfy |corr| < 1."
@@ -93,17 +98,17 @@ def validate_inputs(inputs: SimulationInputs) -> ValidationResult:
     if inputs.inf_std <= 0:
         errors.append(f"Inflation standard deviation ({inputs.inf_std}) must be > 0.")
 
-    # B7: ACA MAGI thresholds must be ordered: target < cliff
+    # B8: ACA MAGI thresholds must be ordered: target < cliff
     if inputs.health.aca_magi_target >= inputs.health.aca_magi_cliff:
         errors.append(
             f"ACA MAGI target ({inputs.health.aca_magi_target}) must be < cliff ({inputs.health.aca_magi_cliff})."
         )
 
-    # B8: n_paths must be in valid range
+    # B9: n_paths must be in valid range
     if not 100 <= inputs.n_paths <= 10_000:
         errors.append(f"n_paths ({inputs.n_paths}) must be between 100 and 10,000.")
 
-    # B9: ss_start_age must be in [62, 70]
+    # B10: ss_start_age must be in [62, 70]
     if inputs.ss_enabled and not 62 <= inputs.ss_start_age <= 70:
         errors.append(f"SS start age ({inputs.ss_start_age}) must be between 62 and 70.")
 
@@ -181,9 +186,14 @@ def _check_tier_contiguity(inputs: SimulationInputs) -> list[str]:
     expected_end = inputs.retire_age + inputs.plan_years - 1
 
     for tier in tiers:
-        if tier.start_age != expected_start:
+        if tier.start_age < expected_start:
             errors.append(
-                f"Spending tier gap: expected start at {expected_start}, got {tier.start_age}."
+                f"Spending tier overlap: tier starts at {tier.start_age} but expected {expected_start}."
+            )
+            break
+        if tier.start_age > expected_start:
+            errors.append(
+                f"No spending tier covers ages [{expected_start}] to [{tier.start_age - 1}]."
             )
             break
         if tier.start_age > tier.end_age:
