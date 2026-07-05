@@ -48,7 +48,7 @@ Deliver a repeatable Windows packaging flow for `myfinmodel` that:
 Current repo assumptions:
 
 - App entrypoint is `app.py`
-- App is launched in development with `streamlit run app.py`
+- App is launched in development with `uv run streamlit run app.py`
 - Dependencies are managed with `uv` project mode (`pyproject.toml` + `uv.lock`)
 - Core dependencies include Streamlit, Plotly, Pandas, NumPy, SciPy, and OpenPyXL
 - The browser-based UI is acceptable as long as launch/setup feels like a local app
