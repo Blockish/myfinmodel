@@ -1,191 +1,348 @@
-"""Data models for the Monte Carlo retirement simulator."""
+"""Data models for the Monte Carlo retirement simulator.
+
+All models are mutable dataclasses. Tests should verify that mutations
+during simulation do not accidentally affect cached inputs or cause state leaks.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Optional
 
 import numpy as np
 
 
-class GuardrailModel(str, Enum):
-    """Supported withdrawal guardrail models."""
+@dataclass
+class SpendingTier:
+    """A single age-range spending tier (spec §2.2.3)."""
 
-    INFLATION_ADJUSTED = "Inflation-Adjusted"
-    NOMINAL_FIXED = "Nominal Fixed"
-    GUARDRAILS_DYNAMIC = "Guardrails (Dynamic)"
+    start_age: int
+    """First age covered by this tier (inclusive)."""
+
+    end_age: int
+    """Last age covered by this tier (inclusive)."""
+
+    annual_spend: float
+    """Annual spending in real (today's) dollars for this age range."""
 
 
 @dataclass
-class SimulationParams:
-    """All input parameters required to run a Monte Carlo simulation."""
+class GuardrailGR1Config:
+    """Portfolio Value Guardrail configuration (spec §2.2.7 GR1)."""
 
-    # Portfolio
-    initial_portfolio: float = 1_000_000.0
-    """Starting portfolio value in dollars."""
+    enabled: bool = True
+    floor_pct: float = 0.50
+    """Portfolio floor as fraction of starting portfolio (50%)."""
 
-    # Spending
-    annual_spending: float = 40_000.0
-    """Initial annual withdrawal amount in dollars."""
+    ceil_pct: float = 1.50
+    """Portfolio ceiling as fraction of starting portfolio (150%)."""
 
-    # Return assumptions
-    mean_return: float = 0.065
-    """Expected annualized nominal investment return (e.g. 0.065 = 6.5 %)."""
+    cut_pct: float = 0.10
+    """Spending cut when floor is breached (10%)."""
 
-    return_std: float = 0.12
-    """Standard deviation of annual nominal returns (e.g. 0.12 = 12 %)."""
-
-    # Inflation assumptions
-    mean_inflation: float = 0.03
-    """Expected annual inflation rate (e.g. 0.03 = 3 %)."""
-
-    inflation_std: float = 0.01
-    """Standard deviation of annual inflation (e.g. 0.01 = 1 %)."""
-
-    # Time horizon
-    years: int = 30
-    """Number of years to simulate."""
-
-    # Simulation settings
-    num_simulations: int = 1_000
-    """Number of Monte Carlo paths to generate."""
-
-    random_seed: Optional[int] = 42
-    """Optional random seed for reproducibility."""
-
-    # Guardrail model
-    guardrail_model: GuardrailModel = GuardrailModel.INFLATION_ADJUSTED
-    """Withdrawal guardrail strategy to apply."""
-
-    # Dynamic guardrail thresholds (used only when model is GUARDRAILS_DYNAMIC)
-    upper_guardrail: float = 0.20
-    """Increase spending by this fraction when portfolio exceeds upper threshold."""
-
-    lower_guardrail: float = 0.20
-    """Decrease spending by this fraction when portfolio falls below lower threshold."""
-
-    upper_guardrail_pct: float = 1.20
-    """Multiplier applied to the starting portfolio-to-spending ratio above which the upper guardrail triggers.
-    For example, 1.20 means the guardrail fires when the current portfolio/spending ratio exceeds
-    120% of the initial portfolio-to-spending ratio."""
-
-    lower_guardrail_pct: float = 0.80
-    """Multiplier applied to the starting portfolio-to-spending ratio below which the lower guardrail triggers.
-    For example, 0.80 means the guardrail fires when the current portfolio/spending ratio falls below
-    80% of the initial portfolio-to-spending ratio."""
-
-    def withdrawal_rate(self) -> float:
-        """Return the initial withdrawal rate as a percentage."""
-        if self.initial_portfolio > 0:
-            return self.annual_spending / self.initial_portfolio
-        return 0.0
+    raise_pct: float = 0.10
+    """Spending raise when ceiling is breached (10%)."""
 
 
 @dataclass
-class SimulationResult:
-    """Result for a single Monte Carlo path."""
+class GuardrailGR2Config:
+    """Withdrawal Rate Guardrail configuration (spec §2.2.7 GR2)."""
 
-    path_id: int
-    """Zero-based index of this simulation path."""
+    enabled: bool = True
+    low_rate: float = 0.03
+    """Low withdrawal rate threshold (3.0%)."""
 
-    portfolio_values: list[float]
-    """Portfolio value at the end of each year (length == params.years + 1,
-    index 0 is the starting value)."""
+    warn_rate: float = 0.05
+    """Warning withdrawal rate threshold (5.0%)."""
 
-    annual_spending: list[float]
-    """Actual spending applied each year (length == params.years)."""
+    crit_rate: float = 0.065
+    """Critical withdrawal rate threshold (6.5%)."""
 
-    success: bool
-    """True if the portfolio survived (value > 0) for the entire horizon."""
+    low_raise: float = 0.05
+    """Spending raise when WR < low_rate (5%)."""
 
-    depletion_year: Optional[int] = None
-    """Year in which the portfolio was depleted, or None if it survived."""
+    warn_cut: float = 0.05
+    """Spending cut when warn_rate <= WR < crit_rate (5%)."""
 
-    @property
-    def final_value(self) -> float:
-        """Portfolio value at the end of the simulation horizon."""
-        return self.portfolio_values[-1]
-
-    @property
-    def peak_value(self) -> float:
-        """Maximum portfolio value across all years."""
-        return max(self.portfolio_values)
-
-    @property
-    def trough_value(self) -> float:
-        """Minimum portfolio value across all years."""
-        return min(self.portfolio_values)
+    crit_cut: float = 0.15
+    """Spending cut when WR >= crit_rate (15%)."""
 
 
 @dataclass
-class SimulationSummary:
-    """Aggregate statistics across all Monte Carlo paths."""
+class GuardrailGR3Config:
+    """ACA MAGI Guardrail configuration (spec §2.2.7 GR3).
 
-    params: SimulationParams
-    """The parameters used to generate this summary."""
+    Actual ACA thresholds and premiums are stored in HealthInsuranceConfig.
+    """
 
-    results: list[SimulationResult]
-    """All individual simulation paths."""
+    enabled: bool = True
 
-    # Aggregate metrics (computed lazily via property)
-    _percentile_values: Optional[np.ndarray] = field(default=None, repr=False)
 
-    @property
-    def num_paths(self) -> int:
-        return len(self.results)
+@dataclass
+class GuardrailGR4Config:
+    """Inflation Guardrail configuration (spec §2.2.7 GR4)."""
 
-    @property
+    enabled: bool = True
+    inf_trigger: float = 0.045
+    """Inflation trigger rate (4.5%)."""
+
+    cut_pct: float = 0.05
+    """Spending cut when inflation exceeds trigger (5%)."""
+
+
+@dataclass
+class HealthInsuranceConfig:
+    """Health insurance and ACA parameters (spec §2.2.5)."""
+
+    medicare_age: int = 65
+    """Age at which Medicare coverage begins."""
+
+    medicare_premium: float = 3_600.0
+    """Annual Medicare premium (Part B + D) in real dollars."""
+
+    aca_guardrail_enabled: bool = True
+    """Whether to apply ACA MAGI guardrail logic."""
+
+    aca_magi_cliff: float = 62_000.0
+    """MAGI threshold above which all ACA subsidies are lost (400% FPL)."""
+
+    aca_magi_target: float = 58_000.0
+    """Target MAGI to preserve full subsidy."""
+
+    aca_premium_over: float = 18_000.0
+    """Annual premium when MAGI exceeds cliff (unsubsidized)."""
+
+    aca_premium_under: float = 4_800.0
+    """Annual premium when MAGI is under cliff (subsidized)."""
+
+
+@dataclass
+class SimulationInputs:
+    """All input parameters required to run a Monte Carlo simulation (spec §2.2).
+
+    Mutable by design to support scenario editing and modification.
+    """
+
+    # ── Portfolio (spec §2.2.1) ──────────────────────────────────────────────
+    port_start: float
+    """Starting portfolio value in real dollars. Required; must be > 0."""
+
+    taxable_value: float = 0.0
+    """Taxable (brokerage) account value in real dollars."""
+
+    tax_deferred_value: float = 0.0
+    """Tax-deferred (IRA, 401k) account value in real dollars."""
+
+    roth_value: float = 0.0
+    """Roth (tax-free) account value in real dollars."""
+
+    unrealized_gain_pct: float = 0.30
+    """Fraction of taxable account representing embedded capital gains (0–1)."""
+
+    ltcg_rate: float = 0.15
+    """Long-term capital gains tax rate applied to taxable account (0–1)."""
+
+    ord_income_rate: float = 0.22
+    """Ordinary income tax rate applied to IRA/401k withdrawals (0–1)."""
+
+    # ── Personal Information (spec §2.2.2) ───────────────────────────────────
+    current_age: int = 65
+    """Client's current age in years."""
+
+    retire_age: int = 65
+    """Age at which portfolio withdrawals begin."""
+
+    ss_start_age: int = 67
+    """Age at which Social Security benefits begin (62–70)."""
+
+    plan_years: int = 35
+    """Number of years to simulate from retire_age."""
+
+    filing_status: str = "Single"
+    """Tax filing status: 'Single' or 'Married Filing Jointly'."""
+
+    # ── Spending (spec §2.2.3) ────────────────────────────────────────────────
+    spending_tiers: list[SpendingTier] = field(default_factory=list)
+    """Age-range spending tiers (1–5 tiers). Must cover full horizon contiguously."""
+
+    spend_floor: float = 0.0
+    """Minimum annual spending (real dollars). Guardrails cannot reduce below."""
+
+    spend_ceiling: float = 2_000_000.0
+    """Maximum annual spending (real dollars). Guardrails cannot increase above."""
+
+    # ── Social Security (spec §2.2.4) ─────────────────────────────────────────
+    ss_enabled: bool = True
+    """Whether Social Security income is included."""
+
+    ss_annual: float = 24_000.0
+    """Annual SS benefit at claiming age, in real dollars."""
+
+    ss_cola: float = 0.025
+    """Social Security COLA (cost-of-living adjustment) rate (0–1)."""
+
+    # ── Health Insurance (spec §2.2.5) ────────────────────────────────────────
+    health: HealthInsuranceConfig = field(default_factory=HealthInsuranceConfig)
+    """Health insurance and ACA configuration."""
+
+    # ── Market Assumptions (spec §2.2.6) ──────────────────────────────────────
+    ret_mean: float = 0.065
+    """Expected annual portfolio return (6.5%)."""
+
+    ret_std: float = 0.12
+    """Annual return standard deviation (12%)."""
+
+    ret_inf_corr: float = 0.10
+    """Return–inflation correlation (-1 to 1)."""
+
+    inf_mean: float = 0.03
+    """Expected annual inflation (3%)."""
+
+    inf_std: float = 0.015
+    """Annual inflation standard deviation (1.5%)."""
+
+    inf_floor: float = 0.01
+    """Minimum annual inflation (1%); inflation draws clipped at this floor."""
+
+    # ── Simulation Settings ────────────────────────────────────────────────────
+    n_paths: int = 1_000
+    """Number of Monte Carlo simulation paths (100–10,000)."""
+
+    random_seed: int = 42
+    """Random seed for reproducibility."""
+
+    # ── Guardrails (spec §2.2.7) ──────────────────────────────────────────────
+    gr1: GuardrailGR1Config = field(default_factory=GuardrailGR1Config)
+    """Portfolio Value Guardrail (GR1) configuration."""
+
+    gr2: GuardrailGR2Config = field(default_factory=GuardrailGR2Config)
+    """Withdrawal Rate Guardrail (GR2) configuration."""
+
+    gr3: GuardrailGR3Config = field(default_factory=GuardrailGR3Config)
+    """ACA MAGI Guardrail (GR3) configuration."""
+
+    gr4: GuardrailGR4Config = field(default_factory=GuardrailGR4Config)
+    """Inflation Guardrail (GR4) configuration."""
+
+
+@dataclass
+class SimulationResults:
+    """Aggregate results from Monte Carlo simulation (spec §3.6).
+
+    Contains vectorized arrays (n_paths × plan_years) of all simulation outputs.
+    """
+
+    # ── Core arrays (shape: n_paths × plan_years unless noted) ────────────────
+    portfolio: np.ndarray
+    """Nominal portfolio value at end of each year."""
+
+    real_portfolio: np.ndarray
+    """Inflation-adjusted portfolio value (real dollars)."""
+
+    spend: np.ndarray
+    """Guardrail-adjusted nominal spending each year."""
+
+    real_spend: np.ndarray
+    """Inflation-adjusted spending (real dollars)."""
+
+    gross_wd: np.ndarray
+    """Gross withdrawal (tax-grossed-up) each year."""
+
+    net_wd: np.ndarray
+    """Net withdrawal (before tax gross-up) each year."""
+
+    wr: np.ndarray
+    """Withdrawal rate (gross_wd / portfolio_start) each year."""
+
+    cum_inf: np.ndarray
+    """Cumulative inflation index each year."""
+
+    ss_income: np.ndarray
+    """Social Security income (nominal, COLA-adjusted) each year."""
+
+    health_cost: np.ndarray
+    """Health insurance cost each year."""
+
+    events: np.ndarray
+    """Guardrail event codes (dtype=object, str values) each year."""
+
+    ret_draws: np.ndarray
+    """Raw portfolio return draws (shape: n_paths × plan_years)."""
+
+    inf_draws: np.ndarray
+    """Raw inflation draws post-floor-clipping (shape: n_paths × plan_years)."""
+
+    # ── Metadata ───────────────────────────────────────────────────────────────
+    ages: list[int]
+    """Age at each year: [retire_age, retire_age+1, ..., retire_age+plan_years-1]."""
+
+    n_paths: int
+    """Number of simulation paths."""
+
+    plan_years: int
+    """Number of years simulated."""
+
+    inputs: SimulationInputs
+    """Deep copy of validated inputs used to generate this result."""
+
     def success_rate(self) -> float:
-        """Fraction of paths that succeeded (0–1)."""
-        if not self.results:
+        """Fraction of paths where portfolio > 0 at end of horizon."""
+        if self.n_paths == 0:
             return 0.0
-        return sum(r.success for r in self.results) / len(self.results)
+        return float(np.mean(self.portfolio[:, -1] > 0))
 
-    @property
     def success_count(self) -> int:
-        return sum(r.success for r in self.results)
+        """Number of paths that survived to end of horizon."""
+        return int(np.sum(self.portfolio[:, -1] > 0))
 
-    @property
     def failure_count(self) -> int:
-        return self.num_paths - self.success_count
+        """Number of paths that depleted."""
+        return self.n_paths - self.success_count()
 
-    @property
     def median_final_value(self) -> float:
-        finals = [r.final_value for r in self.results]
-        if not finals:
+        """Median final portfolio value (nominal)."""
+        if self.n_paths == 0:
             return 0.0
-        return float(np.median(finals))
-
-    @property
-    def mean_final_value(self) -> float:
-        finals = [r.final_value for r in self.results]
-        if not finals:
-            return 0.0
-        return float(np.mean(finals))
+        return float(np.median(self.portfolio[:, -1]))
 
     def percentile_paths(self, percentiles: list[int] | None = None) -> dict[int, list[float]]:
-        """Return portfolio-value arrays at the requested percentiles across years.
+        """Return portfolio-value arrays at requested percentiles across years.
 
-        Keys are percentile integers (e.g. 10, 25, 50, 75, 90).
-        Each value is a list of length ``params.years + 1``.
-        Returns an empty dict when there are no simulation results.
+        Parameters
+        ----------
+        percentiles : list[int], optional
+            Percentile values (0–100). Default: [10, 25, 50, 75, 90].
+
+        Returns
+        -------
+        dict[int, list[float]]
+            Mapping of percentile → list of portfolio values (length plan_years+1).
+            Empty dict if no results.
         """
         if percentiles is None:
             percentiles = [10, 25, 50, 75, 90]
-        if not self.results:
+        if self.n_paths == 0:
             return {}
-        # Shape: (num_paths, years+1)
-        matrix = np.array([r.portfolio_values for r in self.results])
         return {
-            p: np.percentile(matrix, p, axis=0).tolist()
+            p: np.percentile(self.portfolio, p, axis=0).tolist()
             for p in percentiles
         }
 
     def depletion_year_distribution(self) -> dict[int, int]:
-        """Return a count of failures by the year of depletion."""
+        """Return count of failures by year of depletion.
+
+        Returns
+        -------
+        dict[int, int]
+            Mapping of depletion year (1-indexed) → count of paths.
+            Empty dict if all paths survived.
+        """
         dist: dict[int, int] = {}
-        for r in self.results:
-            if not r.success and r.depletion_year is not None:
-                dist[r.depletion_year] = dist.get(r.depletion_year, 0) + 1
+        for p in range(self.n_paths):
+            for y in range(self.plan_years):
+                if self.portfolio[p, y] <= 0 and (y == 0 or self.portfolio[p, y - 1] > 0):
+                    # First year where portfolio hit zero
+                    depletion_year = y + 1  # Convert to 1-indexed
+                    dist[depletion_year] = dist.get(depletion_year, 0) + 1
+                    break
         return dist

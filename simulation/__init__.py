@@ -1,12 +1,24 @@
 """Monte Carlo simulation engine for retirement spending analysis."""
 
-from .models import SimulationParams, SimulationResult, SimulationSummary, GuardrailModel
-from .monte_carlo import MonteCarloSimulator
+from .models import (
+    GuardrailGR1Config,
+    GuardrailGR2Config,
+    GuardrailGR3Config,
+    GuardrailGR4Config,
+    HealthInsuranceConfig,
+    SimulationInputs,
+    SimulationResults,
+    SpendingTier,
+)
 
 __all__ = [
-    "SimulationParams",
-    "SimulationResult",
-    "SimulationSummary",
-    "GuardrailModel",
+    "SpendingTier",
+    "GuardrailGR1Config",
+    "GuardrailGR2Config",
+    "GuardrailGR3Config",
+    "GuardrailGR4Config",
+    "HealthInsuranceConfig",
+    "SimulationInputs",
+    "SimulationResults",
     "MonteCarloSimulator",
 ]
