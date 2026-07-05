@@ -6,6 +6,7 @@ during simulation do not accidentally affect cached inputs or cause state leaks.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
@@ -405,6 +406,10 @@ class SimulationResults:
 
     inputs: SimulationInputs
     """Deep copy of validated inputs used to generate this result."""
+
+    def __post_init__(self) -> None:
+        """Store an internal deep copy so later input mutation does not leak into results."""
+        self.inputs = deepcopy(self.inputs)
 
     def success_rate(self) -> float:
         """Fraction of paths where portfolio > 0 at end of horizon."""

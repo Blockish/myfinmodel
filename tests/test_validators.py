@@ -13,6 +13,12 @@ from simulation.models import (
 from validation.validators import ValidationResult, validate_inputs
 
 
+def _default_tiers(retire_age: int = 65, plan_years: int = 35) -> list[SpendingTier]:
+    """Build contiguous tiers that cover the full horizon for valid-base scenarios."""
+    end_age = retire_age + plan_years - 1
+    return [SpendingTier(start_age=retire_age, end_age=end_age, annual_spend=50_000.0)]
+
+
 class TestValidationResult:
     """Tests for ValidationResult dataclass."""
 
@@ -72,6 +78,7 @@ class TestPortfolioValidation:
         """W1: Warn if account breakdown doesn't match portfolio."""
         inputs = SimulationInputs(
             port_start=1_000_000.0,
+            spending_tiers=_default_tiers(),
             taxable_value=200_000.0,
             tax_deferred_value=300_000.0,
             roth_value=100_000.0,
@@ -84,6 +91,7 @@ class TestPortfolioValidation:
         """W1: No warning if accounts sum to portfolio."""
         inputs = SimulationInputs(
             port_start=1_000_000.0,
+            spending_tiers=_default_tiers(),
             taxable_value=300_000.0,
             tax_deferred_value=500_000.0,
             roth_value=200_000.0,
@@ -104,7 +112,7 @@ class TestSpendingValidation:
         assert any("floor" in err.lower() and "negative" in err.lower() for err in result.errors)
 
     def test_block_spending_ceiling_below_floor(self):
-        """B4: Spending ceiling must be >= floor."""
+        """B4: Spending floor must be strictly less than ceiling."""
         inputs = SimulationInputs(
             port_start=1_000_000.0,
             spend_floor=50_000.0,
@@ -112,7 +120,25 @@ class TestSpendingValidation:
         )
         result = validate_inputs(inputs)
         assert not result.valid
-        assert any("ceiling" in err.lower() and ">=" in err for err in result.errors)
+        assert any("less than" in err.lower() for err in result.errors)
+
+    def test_block_spending_ceiling_equal_floor(self):
+        """B4: Equality is invalid; floor must be < ceiling."""
+        inputs = SimulationInputs(
+            port_start=1_000_000.0,
+            spend_floor=50_000.0,
+            spend_ceiling=50_000.0,
+        )
+        result = validate_inputs(inputs)
+        assert not result.valid
+        assert any("less than" in err.lower() for err in result.errors)
+
+    def test_block_tiers_missing(self):
+        """B2: Missing tiers should block run."""
+        inputs = SimulationInputs(port_start=1_000_000.0, spending_tiers=[])
+        result = validate_inputs(inputs)
+        assert not result.valid
+        assert any("no spending tier covers ages" in err.lower() for err in result.errors)
 
     def test_block_tier_gap(self):
         """B2: Spending tiers must be contiguous."""
@@ -182,6 +208,7 @@ class TestGuardrailValidation:
         """B5: Pass with correct GR2 ordering."""
         inputs = SimulationInputs(
             port_start=1_000_000.0,
+            spending_tiers=_default_tiers(),
             gr2=GuardrailGR2Config(low_rate=0.03, warn_rate=0.05, crit_rate=0.065),
         )
         result = validate_inputs(inputs)
@@ -193,32 +220,48 @@ class TestCorrelationValidation:
     """Tests for correlation validation."""
 
     def test_block_correlation_below_minus_one(self):
-        """B6: Return–inflation correlation must be >= -1."""
+        """B6: Return–inflation correlation must satisfy |corr| < 1."""
         inputs = SimulationInputs(port_start=1_000_000.0, ret_inf_corr=-1.5)
         result = validate_inputs(inputs)
         assert not result.valid
-        assert any("correlation" in err.lower() and "[-1, 1]" in err for err in result.errors)
+        assert any("|corr| < 1" in err for err in result.errors)
 
     def test_block_correlation_above_one(self):
-        """B6: Return–inflation correlation must be <= 1."""
+        """B6: Return–inflation correlation must satisfy |corr| < 1."""
         inputs = SimulationInputs(port_start=1_000_000.0, ret_inf_corr=1.5)
         result = validate_inputs(inputs)
         assert not result.valid
-        assert any("correlation" in err.lower() and "[-1, 1]" in err for err in result.errors)
+        assert any("|corr| < 1" in err for err in result.errors)
 
-    def test_pass_correlation_boundaries(self):
-        """B6: Accept correlation at boundaries [-1, 1]."""
-        for corr in [-1.0, 0.0, 1.0]:
+    def test_block_correlation_at_boundaries(self):
+        """B6: Reject correlation at boundaries -1 and 1."""
+        for corr in [-1.0, 1.0]:
             inputs = SimulationInputs(port_start=1_000_000.0, ret_inf_corr=corr)
             result = validate_inputs(inputs)
+            assert not result.valid
+            assert any("|corr| < 1" in err for err in result.errors)
+
+    def test_pass_correlation_interior(self):
+        """B6: Accept correlations strictly inside (-1, 1)."""
+        for corr in [-0.99, 0.0, 0.99]:
+            inputs = SimulationInputs(port_start=1_000_000.0, spending_tiers=_default_tiers(), ret_inf_corr=corr)
+            result = validate_inputs(inputs)
             assert not any("correlation" in err.lower() for err in result.errors)
+
+    def test_block_nonpositive_std_devs(self):
+        """B6: ret_std and inf_std must be > 0."""
+        inputs = SimulationInputs(port_start=1_000_000.0, ret_std=0.0, inf_std=0.0)
+        result = validate_inputs(inputs)
+        assert not result.valid
+        assert any("return standard deviation" in err.lower() for err in result.errors)
+        assert any("inflation standard deviation" in err.lower() for err in result.errors)
 
 
 class TestACAValidation:
     """Tests for ACA-related validation."""
 
     def test_block_aca_magi_ordering(self):
-        """B7: ACA MAGI target must be <= cliff."""
+        """B7: ACA MAGI target must be < cliff."""
         inputs = SimulationInputs(
             port_start=1_000_000.0,
             health=HealthInsuranceConfig(
@@ -229,6 +272,19 @@ class TestACAValidation:
         result = validate_inputs(inputs)
         assert not result.valid
         assert any("MAGI" in err and "target" in err for err in result.errors)
+
+    def test_block_aca_magi_equality(self):
+        """B7: Equality is invalid; target must be strictly less than cliff."""
+        inputs = SimulationInputs(
+            port_start=1_000_000.0,
+            health=HealthInsuranceConfig(
+                aca_magi_target=62_000.0,
+                aca_magi_cliff=62_000.0,
+            ),
+        )
+        result = validate_inputs(inputs)
+        assert not result.valid
+        assert any("must be < cliff" in err for err in result.errors)
 
     def test_pass_aca_magi_ordering(self):
         """B7: Pass with correct ACA MAGI ordering."""
@@ -263,7 +319,7 @@ class TestSimulationSettingsValidation:
     def test_pass_n_paths_boundaries(self):
         """B8: Accept n_paths at boundaries [100, 10000]."""
         for n in [100, 1000, 10_000]:
-            inputs = SimulationInputs(port_start=1_000_000.0, n_paths=n)
+            inputs = SimulationInputs(port_start=1_000_000.0, spending_tiers=_default_tiers(), n_paths=n)
             result = validate_inputs(inputs)
             assert not any("n_paths" in err.lower() for err in result.errors)
 
@@ -271,6 +327,7 @@ class TestSimulationSettingsValidation:
         """W2: Warn for large n_paths * plan_years."""
         inputs = SimulationInputs(
             port_start=1_000_000.0,
+            spending_tiers=_default_tiers(plan_years=100),
             n_paths=10_000,
             plan_years=100,
         )
@@ -311,10 +368,24 @@ class TestSocialSecurityValidation:
             plan_years=5,
             ss_enabled=True,
             ss_start_age=70,  # Plan ends at 69 (65+5-1); 70 is after
+            spending_tiers=_default_tiers(plan_years=5),
         )
         result = validate_inputs(inputs)
         assert result.valid
         assert any("Social Security" in w and "horizon" in w for w in result.warnings)
+
+    def test_warn_ss_starts_at_retirement(self):
+        """W5: Warn when SS starts immediately at retirement."""
+        inputs = SimulationInputs(
+            port_start=1_000_000.0,
+            retire_age=67,
+            ss_enabled=True,
+            ss_start_age=67,
+            spending_tiers=_default_tiers(retire_age=67),
+        )
+        result = validate_inputs(inputs)
+        assert result.valid
+        assert any("begins immediately" in w for w in result.warnings)
 
 
 class TestInflationValidation:
@@ -324,6 +395,7 @@ class TestInflationValidation:
         """W3: Warn if inflation floor > mean."""
         inputs = SimulationInputs(
             port_start=1_000_000.0,
+            spending_tiers=_default_tiers(),
             inf_mean=0.02,
             inf_floor=0.03,
         )
@@ -333,7 +405,7 @@ class TestInflationValidation:
 
     def test_warn_negative_return(self):
         """W7: Warn for negative expected return."""
-        inputs = SimulationInputs(port_start=1_000_000.0, ret_mean=-0.05)
+        inputs = SimulationInputs(port_start=1_000_000.0, spending_tiers=_default_tiers(), ret_mean=-0.05)
         result = validate_inputs(inputs)
         assert result.valid
         assert any("negative" in w.lower() for w in result.warnings)
@@ -341,7 +413,7 @@ class TestInflationValidation:
     def test_warn_unusual_return_std(self):
         """W6: Warn for unusual return std dev."""
         for std in [0.02, 0.30]:
-            inputs = SimulationInputs(port_start=1_000_000.0, ret_std=std)
+            inputs = SimulationInputs(port_start=1_000_000.0, spending_tiers=_default_tiers(), ret_std=std)
             result = validate_inputs(inputs)
             assert result.valid
             # Both extremes should warn
@@ -351,9 +423,16 @@ class TestInflationValidation:
 class TestIntegration:
     """Integration tests combining multiple validation rules."""
 
-    def test_valid_minimal_inputs(self):
-        """Minimal valid inputs pass all checks."""
-        inputs = SimulationInputs(port_start=1_000_000.0)
+    def test_block_minimal_inputs_missing_tiers(self):
+        """Missing spending tiers should fail validation per spec coverage rule."""
+        inputs = SimulationInputs(port_start=1_000_000.0, spending_tiers=[])
+        result = validate_inputs(inputs)
+        assert not result.valid
+        assert any("no spending tier covers ages" in err.lower() for err in result.errors)
+
+    def test_valid_minimal_inputs_with_tier(self):
+        """Minimal valid inputs with a single covering tier pass."""
+        inputs = SimulationInputs(port_start=1_000_000.0, spending_tiers=_default_tiers())
         result = validate_inputs(inputs)
         assert result.valid
 

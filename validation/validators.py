@@ -68,30 +68,35 @@ def validate_inputs(inputs: SimulationInputs) -> ValidationResult:
         errors.append(f"Portfolio start ({inputs.port_start}) must be > 0.")
 
     # B2: Spending tiers must cover horizon contiguously
-    if inputs.spending_tiers:
-        errors.extend(_check_tier_contiguity(inputs))
+    errors.extend(_check_tier_contiguity(inputs))
 
     # B3: Spending floor must be >= 0
     if inputs.spend_floor < 0:
         errors.append(f"Spending floor ({inputs.spend_floor}) cannot be negative.")
 
-    # B4: Spending ceiling must be >= floor
-    if inputs.spend_ceiling < inputs.spend_floor:
+    # B4: Spending ceiling must be > floor
+    if inputs.spend_ceiling <= inputs.spend_floor:
         errors.append(
-            f"Spending ceiling ({inputs.spend_ceiling}) must be >= floor ({inputs.spend_floor})."
+            f"Spending floor ({inputs.spend_floor}) must be less than ceiling ({inputs.spend_ceiling})."
         )
 
     # B5: GR2 thresholds must be ordered: low_rate < warn_rate < crit_rate
     errors.extend(_check_gr2_ordering(inputs))
 
-    # B6: Return–inflation correlation must be in [-1, 1]
-    if not -1 <= inputs.ret_inf_corr <= 1:
-        errors.append(f"Return–inflation correlation ({inputs.ret_inf_corr}) must be in [-1, 1].")
-
-    # B7: ACA MAGI thresholds must be ordered: target <= cliff
-    if inputs.health.aca_magi_target > inputs.health.aca_magi_cliff:
+    # B6: Covariance validity for bivariate draw matrix
+    if abs(inputs.ret_inf_corr) >= 1:
         errors.append(
-            f"ACA MAGI target ({inputs.health.aca_magi_target}) must be <= cliff ({inputs.health.aca_magi_cliff})."
+            f"Return–inflation correlation ({inputs.ret_inf_corr}) must satisfy |corr| < 1."
+        )
+    if inputs.ret_std <= 0:
+        errors.append(f"Return standard deviation ({inputs.ret_std}) must be > 0.")
+    if inputs.inf_std <= 0:
+        errors.append(f"Inflation standard deviation ({inputs.inf_std}) must be > 0.")
+
+    # B7: ACA MAGI thresholds must be ordered: target < cliff
+    if inputs.health.aca_magi_target >= inputs.health.aca_magi_cliff:
+        errors.append(
+            f"ACA MAGI target ({inputs.health.aca_magi_target}) must be < cliff ({inputs.health.aca_magi_cliff})."
         )
 
     # B8: n_paths must be in valid range
@@ -132,6 +137,12 @@ def validate_inputs(inputs: SimulationInputs) -> ValidationResult:
             f"Social Security starts at {inputs.ss_start_age}, after plan horizon ends at {inputs.retire_age + inputs.plan_years - 1}."
         )
 
+    # W5: Social Security starts immediately at retirement
+    if inputs.ss_enabled and inputs.ss_start_age == inputs.retire_age:
+        warnings.append(
+            "Social Security start age equals retirement age; SS income begins immediately in Year 1."
+        )
+
     # W6: Uncommon return std dev
     if inputs.ret_std < 0.05 or inputs.ret_std > 0.25:
         warnings.append(
@@ -156,6 +167,11 @@ def _check_tier_contiguity(inputs: SimulationInputs) -> list[str]:
     errors: list[str] = []
 
     if not inputs.spending_tiers:
+        start_age = inputs.retire_age
+        end_age = inputs.retire_age + inputs.plan_years - 1
+        errors.append(
+            f"No spending tier covers ages [{start_age}] to [{end_age}]. Add a tier or extend an existing tier."
+        )
         return errors
 
     tiers = sorted(inputs.spending_tiers, key=lambda t: t.start_age)
