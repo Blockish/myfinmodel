@@ -53,6 +53,18 @@ def _safe_median(values: np.ndarray) -> float:
     return float(np.median(values)) if values.size else 0.0
 
 
+def _aca_breach_active(results: SimulationResults) -> bool:
+    return bool(results.inputs.gr3.enabled and results.inputs.health.aca_guardrail_enabled)
+
+
+def _aca_breach_display_value(results: SimulationResults) -> str:
+    if not results.inputs.gr3.enabled:
+        return "N/A (GR3 disabled)"
+    if not results.inputs.health.aca_guardrail_enabled:
+        return "N/A (ACA guardrail disabled)"
+    return f"{np.mean(np.any(results.events == 'ACA-BREACH', axis=1)) * 100:.1f}%"
+
+
 def _metric_summary(results: SimulationResults) -> _DisplayMetrics:
     alive_mask = results.portfolio > 0
     wr_alive = results.wr[alive_mask]
@@ -60,7 +72,7 @@ def _metric_summary(results: SimulationResults) -> _DisplayMetrics:
     active_grs = sum([
         results.inputs.gr1.enabled,
         results.inputs.gr2.enabled,
-        results.inputs.gr3.enabled and results.inputs.health.aca_guardrail_enabled,
+        _aca_breach_active(results),
         results.inputs.gr4.enabled,
     ])
 
@@ -119,7 +131,7 @@ def _success_metrics_table(results: SimulationResults, *, show_extended: bool = 
         {"Category": "Guardrail Trigger Frequencies", "Metric": "% paths with WR-WARN at least once", "Value": f"{np.mean(np.any(events == 'WR-WARN', axis=1)) * 100:.1f}%"},
         {"Category": "Guardrail Trigger Frequencies", "Metric": "% paths with WR-CRIT at least once", "Value": f"{np.mean(np.any(events == 'WR-CRIT', axis=1)) * 100:.1f}%"},
         {"Category": "Guardrail Trigger Frequencies", "Metric": "% paths with WR-LOW at least once", "Value": f"{np.mean(np.any(events == 'WR-LOW', axis=1)) * 100:.1f}%"},
-        {"Category": "Guardrail Trigger Frequencies", "Metric": "% paths with ACA-BREACH at least once", "Value": f"{np.mean(np.any(events == 'ACA-BREACH', axis=1)) * 100:.1f}%" if (results.inputs.gr3.enabled and results.inputs.health.aca_guardrail_enabled) else "N/A (GR3 disabled)"},
+        {"Category": "Guardrail Trigger Frequencies", "Metric": "% paths with ACA-BREACH at least once", "Value": _aca_breach_display_value(results)},
         {"Category": "Guardrail Trigger Frequencies", "Metric": "% paths with INF at least once", "Value": f"{np.mean(np.any(events == 'INF', axis=1)) * 100:.1f}%"},
         {"Category": "Guardrail Trigger Frequencies", "Metric": "% paths never triggering any guardrail", "Value": f"{np.mean(np.all(events == 'NONE', axis=1)) * 100:.1f}%"},
         {"Category": "Withdrawal Rate Statistics", "Metric": "Median WR across surviving path-years", "Value": f"{_safe_median(wr_alive) * 100:.2f}%"},
@@ -190,10 +202,9 @@ def _spending_percentiles_df(results: SimulationResults) -> pd.DataFrame:
 
 
 def _event_frequency_df(results: SimulationResults) -> pd.DataFrame:
-    data: dict[str, np.ndarray] = {
-        "Age": np.array(results.ages),
-    }
-    for code in _EVENT_CODES:
+    codes = [code for code in _EVENT_CODES if code != "ACA-BREACH" or _aca_breach_active(results)]
+    data: dict[str, np.ndarray] = {"Age": np.array(results.ages)}
+    for code in codes:
         data[code] = np.sum(results.events == code, axis=0)
     return pd.DataFrame(data)
 
@@ -452,7 +463,7 @@ def render_outputs(results: SimulationResults) -> None:
 
     # Tab 4: Analysis (Guardrails + Inflation)
     with tab_objects[3]:
-        aca_active = results.inputs.gr3.enabled and results.inputs.health.aca_guardrail_enabled
+        aca_active = _aca_breach_active(results)
         ev_fig = create_guardrail_event_chart(
             events_matrix=results.events,
             ages=results.ages,
