@@ -218,6 +218,19 @@ def _inflation_stats_df(results: SimulationResults) -> pd.DataFrame:
     )
 
 
+def _pad_to_range(
+    ages: list[int],
+    values: np.ndarray,
+    global_start: int,
+    global_end: int,
+) -> list[float]:
+    """Pad a values array with NaN so it spans [global_start, global_end]."""
+    result = [float("nan")] * (global_end - global_start + 1)
+    for i, age in enumerate(ages):
+        result[age - global_start] = float(values[i])
+    return result
+
+
 def _full_path_export_df(results: SimulationResults) -> pd.DataFrame:
     n, t = results.n_paths, results.plan_years
     path_idx = np.repeat(np.arange(n), t)
@@ -338,13 +351,13 @@ def render_outputs(results: SimulationResults) -> None:
 
     r2 = st.columns(4)
     r2[0].metric(
-        "Average Annual Spending",
+        "Avg Spending (Surviving)",
         f"${m.avg_spending_alive_nominal:,.0f}",
         delta=_usd_delta(
             m.avg_spending_alive_nominal,
             baseline_metrics.avg_spending_alive_nominal if baseline_metrics else None,
         ),
-        help="Delta is relative to selected Scenario A when compare is active.",
+        help="Mean across surviving path-years only. Delta is relative to selected Scenario A when compare is active.",
     )
     r2[1].metric(
         "Median Withdrawal Rate",
@@ -578,11 +591,13 @@ def render_outputs(results: SimulationResults) -> None:
                 a = compare_sources[base_name]
                 b = compare_sources[compare_name]
 
+                a_alive = a.portfolio > 0
+                b_alive = b.portfolio > 0
                 rows = [
                     ("Survival Rate", a.success_rate() * 100, b.success_rate() * 100, "%"),
                     ("Median Final Portfolio", _safe_median(a.portfolio[:, -1]), _safe_median(b.portfolio[:, -1]), "$"),
-                    ("Average Annual Spending", _safe_mean(a.spend), _safe_mean(b.spend), "$"),
-                    ("Median Withdrawal Rate", _safe_median(a.wr[a.portfolio > 0]) * 100, _safe_median(b.wr[b.portfolio > 0]) * 100, "%"),
+                    ("Avg Spending (Surviving)", _safe_mean(a.spend[a_alive]), _safe_mean(b.spend[b_alive]), "$"),
+                    ("Median Withdrawal Rate", _safe_median(a.wr[a_alive]) * 100, _safe_median(b.wr[b_alive]) * 100, "%"),
                 ]
 
                 display_rows: list[dict[str, str]] = []
@@ -609,11 +624,31 @@ def render_outputs(results: SimulationResults) -> None:
 
                 st.dataframe(pd.DataFrame(display_rows), use_container_width=True, hide_index=True)
 
+                # Guard for mismatched horizons between scenarios
+                if a.plan_years != b.plan_years or a.ages[0] != b.ages[0]:
+                    st.warning(
+                        f"Scenario horizons differ ({base_name}: ages {a.ages[0]}-{a.ages[-1]}, "
+                        f"{compare_name}: ages {b.ages[0]}-{b.ages[-1]}). "
+                        "Overlay chart uses each scenario's own age axis; visual comparison may be limited.",
+                        icon="⚠️",
+                    )
+
                 overlay = create_comparison_overlay(
-                    ages=results.ages,
+                    ages=a.ages,
                     scenario_to_median={
                         base_name: np.percentile(a.portfolio, 50, axis=0),
                         compare_name: np.percentile(b.portfolio, 50, axis=0),
+                    },
+                ) if a.plan_years == b.plan_years and a.ages[0] == b.ages[0] else create_comparison_overlay(
+                    ages=list(range(
+                        min(a.ages[0], b.ages[0]),
+                        max(a.ages[-1], b.ages[-1]) + 1,
+                    )),
+                    scenario_to_median={
+                        base_name: _pad_to_range(a.ages, np.percentile(a.portfolio, 50, axis=0),
+                                                 min(a.ages[0], b.ages[0]), max(a.ages[-1], b.ages[-1])),
+                        compare_name: _pad_to_range(b.ages, np.percentile(b.portfolio, 50, axis=0),
+                                                    min(a.ages[0], b.ages[0]), max(a.ages[-1], b.ages[-1])),
                     },
                 )
                 st.plotly_chart(overlay, use_container_width=True)
