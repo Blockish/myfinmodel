@@ -587,6 +587,18 @@ class TestEdgeCases:
         r = run_simulation(inputs)
         assert r.success_rate() == 1.0
 
+    def test_all_paths_deplete_tiny_portfolio(self):
+        """Spec §7.5: Tiny portfolio + huge spending → 0% survival."""
+        inputs = _simple_inputs(
+            port_start=1_000.0, taxable_value=1_000.0,
+            spending_tiers=[SpendingTier(65, 99, 500_000.0)],
+            spend_floor=0.0, spend_ceiling=1_000_000.0,
+            n_paths=200, plan_years=10,
+        )
+        r = run_simulation(inputs)
+        assert r.success_rate() == 0.0
+        assert np.all(r.portfolio[:, -1] == 0)
+
     def test_minimum_plan_years(self):
         """plan_years=1 should run without error."""
         inputs = _simple_inputs(
