@@ -1,15 +1,20 @@
-"""Monte Carlo Retirement Simulator — Streamlit application entry point."""
+"""Monte Carlo Retirement Planner — Streamlit application entry point.
+
+Wires the inputs UI, simulation engine, and results display together.
+See docs/ui-mockup.html for the visual layout reference.
+"""
 
 from __future__ import annotations
 
+import time
+
 import streamlit as st
 
-from simulation.models import GuardrailModel, SimulationParams, SimulationSummary
-
-# NOTE: MonteCarloSimulator removed in Phase 2. App will be rewritten in Phase 3–5.
-# from simulation.monte_carlo import MonteCarloSimulator
+from simulation.engine import run_simulation
+from simulation.models import SimulationInputs, SimulationResults
 from ui.inputs import render_inputs
 from ui.outputs import render_outputs
+from ui.scenarios import render_scenario_controls
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -25,73 +30,6 @@ st.set_page_config(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Helper: Scenario B input form (used in Comparison tab)
-# ──────────────────────────────────────────────────────────────────────────────
-
-def _render_comparison_inputs() -> SimulationParams | None:
-    """Minimal input form for the Scenario B comparison run."""
-    with st.form("comparison_inputs"):
-        st.markdown("**Scenario B Parameters**")
-        c1, c2 = st.columns(2)
-        with c1:
-            portfolio = st.number_input(
-                "Starting portfolio ($)",
-                value=1_000_000.0,
-                step=10_000.0,
-                format="%.0f",
-                key="cmp_portfolio",
-            )
-            spending = st.number_input(
-                "Annual spending ($)",
-                value=40_000.0,
-                step=1_000.0,
-                format="%.0f",
-                key="cmp_spending",
-            )
-            mean_ret = st.slider(
-                "Expected return (%)", 0.0, 20.0, 7.0, 0.5, key="cmp_ret"
-            )
-            ret_std = st.slider(
-                "Return volatility (%)", 0.0, 30.0, 12.0, 0.5, key="cmp_std"
-            )
-        with c2:
-            mean_inf = st.slider(
-                "Expected inflation (%)", 0.0, 15.0, 3.0, 0.25, key="cmp_inf"
-            )
-            inf_std = st.slider(
-                "Inflation volatility (%)", 0.0, 10.0, 1.0, 0.25, key="cmp_inf_std"
-            )
-            years = st.number_input("Years", 1, 60, 30, key="cmp_years")
-            n_sims = st.select_slider(
-                "Simulations",
-                options=[100, 250, 500, 1_000, 2_000, 5_000, 10_000],
-                value=1_000,
-                key="cmp_nsims",
-            )
-            guardrail = st.selectbox(
-                "Guardrail model",
-                options=[m.value for m in GuardrailModel],
-                key="cmp_guardrail",
-            )
-        submitted = st.form_submit_button("▶ Run Scenario B", type="primary")
-
-    if not submitted:
-        return None
-
-    return SimulationParams(
-        initial_portfolio=portfolio,
-        annual_spending=spending,
-        mean_return=mean_ret / 100.0,
-        return_std=ret_std / 100.0,
-        mean_inflation=mean_inf / 100.0,
-        inflation_std=inf_std / 100.0,
-        years=int(years),
-        num_simulations=int(n_sims),
-        guardrail_model=GuardrailModel(guardrail),
-    )
-
-
-# ──────────────────────────────────────────────────────────────────────────────
 # Sidebar
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -100,33 +38,27 @@ with st.sidebar:
     st.caption("Retirement Spending Monte Carlo Simulator")
     st.divider()
 
-    comparison_mode = st.toggle(
-        "Enable Side-by-Side Comparison",
-        value=st.session_state.get("comparison_mode", False),
-        help=(
-            "Run two independent simulations and display their results "
-            "side-by-side to compare the effect of different parameter choices."
-        ),
-    )
-    st.session_state["comparison_mode"] = comparison_mode
+    # Scenario save/load controls
+    render_scenario_controls()
 
     st.divider()
+
+    # Run Simulation button — always visible in sidebar
+    run_clicked = st.button(
+        "▶ Run Simulation",
+        type="primary",
+        use_container_width=True,
+    )
+
+    st.divider()
+
     st.markdown(
         """
         **How to use**
-        1. Fill in your retirement scenario on the **Inputs** tab.
+        1. Configure your retirement scenario on the **Inputs** tab.
         2. Click **▶ Run Simulation**.
         3. Review results on the **Results** tab.
-        4. Optionally enable *Side-by-Side Comparison* to run a second scenario.
-
-        **Guardrail Models**
-        - *Inflation-Adjusted* — spending grows with inflation each year.
-        - *Nominal Fixed* — spending stays constant in dollar terms.
-        - *Guardrails (Dynamic)* — spending is adjusted up or down based on
-          portfolio performance.
-
-        ---
-        *More guardrail strategies and simulation models coming soon.*
+        4. Save scenarios to compare different strategies.
         """
     )
 
@@ -135,69 +67,89 @@ with st.sidebar:
 # Main tabs
 # ──────────────────────────────────────────────────────────────────────────────
 
-tab_labels = ["📋 Inputs", "📊 Results"]
-if comparison_mode:
-    tab_labels.append("⚖️ Comparison")
+tabs = st.tabs(["📋 Inputs", "📊 Results"])
 
-tabs = st.tabs(tab_labels)
-
-# ── Tab 0: Inputs ──────────────────────────────────────────────────────────────
+# ── Tab 0: Inputs ─────────────────────────────────────────────────────────────
 with tabs[0]:
-    params = render_inputs()
-    if params is not None:
-        with st.spinner("Running simulation…"):
-            new_summary: SimulationSummary = MonteCarloSimulator(params).run()
-        st.session_state["last_summary"] = new_summary
-        st.success(
-            f"✅ Simulation complete — "
-            f"{params.num_simulations:,} paths × {params.years} years. "
-            f"Switch to the **Results** tab to see the output."
-        )
+    render_inputs()
 
-# ── Tab 1: Results ─────────────────────────────────────────────────────────────
-with tabs[1]:
-    last_summary: SimulationSummary | None = st.session_state.get("last_summary")
-
-    if last_summary is None:
-        st.info("👈 Run a simulation on the **Inputs** tab to see results here.")
+# ── Stale detection: mark results stale when inputs change ────────────────────
+current_inputs = st.session_state.get("_assembled_inputs")
+existing_results = st.session_state.get("results")
+if existing_results is not None:
+    # Derive reference hash from the inputs that produced the current results
+    ref_hash = st.session_state.get(
+        "_last_inputs_hash", existing_results.inputs.content_hash()
+    )
+    if current_inputs is None or current_inputs.content_hash() != ref_hash:
+        st.session_state["results_stale"] = True
     else:
-        render_outputs(last_summary)
+        # Inputs match again (user reverted changes) — clear stale flag
+        st.session_state["results_stale"] = False
 
-# ── Tab 2: Comparison (optional) ───────────────────────────────────────────────
-if comparison_mode and len(tabs) > 2:
-    with tabs[2]:
-        st.header("⚖️ Side-by-Side Comparison")
-        st.markdown(
-            "Run a **second simulation** with adjusted parameters and compare it "
-            "against your primary scenario."
+# ── Handle Run button click ───────────────────────────────────────────────────
+if run_clicked:
+    inputs: SimulationInputs | None = st.session_state.get("_assembled_inputs")
+    if inputs is None:
+        st.sidebar.error("Fix input errors before running.")
+    else:
+        # Generate a random seed if not locked
+        if not st.session_state.get("lock_seed", False):
+            import random
+            inputs.random_seed = random.randint(0, 999_999)
+            st.session_state["random_seed"] = inputs.random_seed
+
+        with st.spinner("Running simulation…"):
+            t0 = time.perf_counter()
+            results = run_simulation(inputs)
+            elapsed = time.perf_counter() - t0
+
+        st.session_state["results"] = results
+        st.session_state["results_stale"] = False
+        st.session_state["_last_inputs_hash"] = inputs.content_hash()
+        st.session_state["last_runtime"] = elapsed
+        st.sidebar.success(
+            f"✅ Done — {inputs.n_paths:,} paths × {inputs.plan_years} years "
+            f"in {elapsed:.2f}s"
         )
 
-        col_a, col_b = st.columns(2)
+# ── Tab 1: Results ────────────────────────────────────────────────────────────
+with tabs[1]:
+    results_obj: SimulationResults | None = st.session_state.get("results")
 
-        with col_a:
-            st.subheader("Scenario A (Primary)")
-            summary_a: SimulationSummary | None = st.session_state.get("last_summary")
-            if summary_a is None:
-                st.info("Run a simulation on the **Inputs** tab first.")
-            else:
-                render_outputs(summary_a, label="Scenario A")
+    # Stale results banner
+    if st.session_state.get("results_stale") and results_obj is not None:
+        st.warning(
+            "⚠ Inputs changed — click **Run Simulation** to refresh results.",
+            icon="⚠️",
+        )
 
-        with col_b:
-            st.subheader("Scenario B (Alternate)")
-            summary_b: SimulationSummary | None = st.session_state.get(
-                "comparison_summary"
-            )
+    if results_obj is None:
+        st.info(
+            "👈 Configure inputs and click **▶ Run Simulation** to see results here."
+        )
+    else:
+        # Run metadata row
+        elapsed = st.session_state.get("last_runtime", 0)
+        meta_cols = st.columns(5)
+        meta_cols[0].metric("Paths", f"{results_obj.n_paths:,}")
+        meta_cols[1].metric("Years", str(results_obj.plan_years))
+        meta_cols[2].metric("Seed", str(results_obj.inputs.random_seed))
+        meta_cols[3].metric("Runtime", f"{elapsed:.2f}s")
+        with meta_cols[4]:
+            if st.button("🔄 Re-run"):
+                inputs_rerun = st.session_state.get("_assembled_inputs")
+                if inputs_rerun:
+                    with st.spinner("Re-running…"):
+                        t0 = time.perf_counter()
+                        results_obj = run_simulation(inputs_rerun)
+                        st.session_state["results"] = results_obj
+                        st.session_state["last_runtime"] = time.perf_counter() - t0
+                        st.session_state["results_stale"] = False
+                        st.session_state["_last_inputs_hash"] = inputs_rerun.content_hash()
+                    st.rerun()
 
-            with st.expander(
-                "Configure Scenario B", expanded=(summary_b is None)
-            ):
-                params_b = _render_comparison_inputs()
-                if params_b is not None:
-                    with st.spinner("Running Scenario B…"):
-                        summary_b = MonteCarloSimulator(params_b).run()
-                    st.session_state["comparison_summary"] = summary_b
+        st.divider()
 
-            if summary_b is None:
-                st.info("Use the form above to configure and run Scenario B.")
-            else:
-                render_outputs(summary_b, label="Scenario B")
+        # Results display (placeholder — will be fully implemented in Phase 4)
+        render_outputs(results_obj)

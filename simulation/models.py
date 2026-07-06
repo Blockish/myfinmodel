@@ -333,6 +333,10 @@ class SimulationInputs:
     random_seed: int = 42
     """Random seed for reproducibility."""
 
+    def content_hash(self) -> int:
+        """Cheap hash for detecting when inputs change between runs."""
+        return hash(repr(self))
+
     # ── Guardrails (spec §2.2.7) ──────────────────────────────────────────────
     gr1: GuardrailGR1Config = field(default_factory=GuardrailGR1Config)
     """Portfolio Value Guardrail (GR1) configuration."""

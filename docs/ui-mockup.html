@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyFinModel — UI Layout Mockup</title>
+<style>
+  :root {
+    --bg: #0e1117;
+    --surface: #262730;
+    --surface2: #1a1c24;
+    --text: #fafafa;
+    --text-muted: #8b8d97;
+    --accent: #ff4b4b;
+    --accent-blue: #4b8bff;
+    --border: #3d3f4a;
+    --green: #21c354;
+    --yellow: #faca15;
+    --red: #ff4b4b;
+    --sidebar-bg: #14161e;
+    --sidebar-w: 280px;
+    --font: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); display: flex; min-height: 100vh; font-size: 14px; }
+
+  /* ── Sidebar ─────────────────────────────────────── */
+  .sidebar {
+    width: var(--sidebar-w); min-height: 100vh; background: var(--sidebar-bg);
+    border-right: 1px solid var(--border); padding: 1.5rem 1rem; flex-shrink: 0;
+    position: fixed; top: 0; left: 0; overflow-y: auto;
+  }
+  .sidebar h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  .sidebar .caption { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 1rem; }
+  .sidebar .divider { border-top: 1px solid var(--border); margin: 1rem 0; }
+  .sidebar label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.3rem; }
+  .sidebar input[type="text"], .sidebar select {
+    width: 100%; padding: 0.4rem 0.6rem; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-size: 0.85rem; margin-bottom: 0.6rem;
+  }
+  .sidebar .btn-row { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
+  .sidebar .btn-save {
+    flex: 1; padding: 0.4rem; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); cursor: pointer; font-size: 0.8rem;
+  }
+  .btn-run {
+    width: 100%; padding: 0.7rem; background: var(--accent); border: none;
+    border-radius: 8px; color: white; font-size: 1rem; font-weight: 600;
+    cursor: pointer; margin: 0.5rem 0;
+  }
+  .btn-run:hover { opacity: 0.9; }
+  .sidebar .help-text { font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; margin-top: 0.5rem; }
+  .sidebar .scenario-list { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem; }
+
+  /* ── Main Content ────────────────────────────────── */
+  .main { margin-left: var(--sidebar-w); flex: 1; padding: 1.5rem 2rem; max-width: 1100px; }
+
+  /* ── Top-level Tabs ──────────────────────────────── */
+  .tab-bar { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem; }
+  .tab-bar .tab {
+    padding: 0.6rem 1.5rem; cursor: pointer; font-size: 0.95rem;
+    border-bottom: 3px solid transparent; color: var(--text-muted); transition: 0.2s;
+  }
+  .tab-bar .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .tab-bar .tab:hover { color: var(--text); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── Expander ────────────────────────────────────── */
+  .expander {
+    border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.75rem;
+    background: var(--surface2); overflow: hidden;
+  }
+  .expander-header {
+    padding: 0.75rem 1rem; cursor: pointer; display: flex; justify-content: space-between;
+    align-items: center; font-weight: 600; font-size: 0.95rem; user-select: none;
+  }
+  .expander-header:hover { background: var(--surface); }
+  .expander-header .arrow { font-size: 0.7rem; color: var(--text-muted); transition: transform 0.2s; }
+  .expander.open .expander-header .arrow { transform: rotate(90deg); }
+  .expander-body { display: none; padding: 0 1rem 1rem; }
+  .expander.open .expander-body { display: block; }
+
+  /* ── Form Elements ───────────────────────────────── */
+  .form-row { display: flex; gap: 1rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+  .form-group { flex: 1; min-width: 200px; }
+  .form-group label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.3rem; }
+  .form-group .help { font-size: 0.7rem; color: var(--text-muted); font-style: italic; }
+  input[type="number"], input[type="text"], select {
+    width: 100%; padding: 0.5rem 0.7rem; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-size: 0.9rem;
+  }
+  .slider-mock {
+    width: 100%; height: 6px; background: var(--border); border-radius: 3px;
+    position: relative; margin: 0.6rem 0 0.3rem;
+  }
+  .slider-mock .thumb {
+    position: absolute; width: 16px; height: 16px; background: var(--accent);
+    border-radius: 50%; top: -5px; transform: translateX(-50%);
+  }
+  .slider-value { font-size: 0.85rem; color: var(--accent-blue); font-weight: 600; }
+  .toggle-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
+  .toggle-mock {
+    width: 40px; height: 22px; background: var(--green); border-radius: 11px;
+    position: relative; cursor: pointer; flex-shrink: 0;
+  }
+  .toggle-mock.off { background: var(--border); }
+  .toggle-mock::after {
+    content: ''; position: absolute; width: 18px; height: 18px; background: white;
+    border-radius: 50%; top: 2px; right: 2px; transition: 0.2s;
+  }
+  .toggle-mock.off::after { right: auto; left: 2px; }
+  .dropdown-mock {
+    padding: 0.5rem 0.7rem; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-size: 0.9rem; width: 100%;
+  }
+
+  /* ── Inline Validation ───────────────────────────── */
+  .warn-box {
+    background: #3d2e00; border: 1px solid #7a5e00; border-radius: 6px;
+    padding: 0.5rem 0.8rem; font-size: 0.8rem; color: #faca15; margin: 0.5rem 0;
+  }
+  .error-box {
+    background: #3d0000; border: 1px solid #ff4b4b; border-radius: 6px;
+    padding: 0.5rem 0.8rem; font-size: 0.8rem; color: #ff8080; margin: 0.5rem 0;
+  }
+  .info-box {
+    background: #002040; border: 1px solid #4b8bff; border-radius: 6px;
+    padding: 0.5rem 0.8rem; font-size: 0.8rem; color: #8bb8ff; margin: 0.5rem 0;
+  }
+
+  /* ── Spending Tier Row ───────────────────────────── */
+  .tier-row {
+    display: flex; gap: 0.75rem; align-items: center; padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .tier-row .tier-label { font-weight: 600; min-width: 50px; font-size: 0.85rem; }
+  .tier-row .tier-field { flex: 1; }
+  .tier-row .tier-field label { font-size: 0.75rem; }
+  .tier-row .btn-remove {
+    background: none; border: 1px solid var(--border); color: var(--text-muted);
+    border-radius: 4px; padding: 0.3rem 0.6rem; cursor: pointer; font-size: 0.75rem;
+  }
+  .btn-add {
+    background: none; border: 1px dashed var(--border); color: var(--accent-blue);
+    border-radius: 6px; padding: 0.5rem 1rem; cursor: pointer; font-size: 0.85rem;
+    margin-top: 0.5rem;
+  }
+
+  /* ── Preset Description ──────────────────────────── */
+  .preset-desc {
+    background: var(--surface); border-radius: 6px; padding: 0.6rem 0.8rem;
+    font-size: 0.8rem; color: var(--text-muted); margin: 0.5rem 0;
+    border-left: 3px solid var(--accent-blue);
+  }
+
+  /* ── RESULTS TAB ─────────────────────────────────── */
+  .stale-banner {
+    background: #3d2e00; border: 1px solid #7a5e00; border-radius: 8px;
+    padding: 0.75rem 1rem; font-size: 0.9rem; color: #faca15; margin-bottom: 1rem;
+    text-align: center; font-weight: 600;
+  }
+  .run-meta {
+    display: flex; gap: 1.5rem; align-items: center; font-size: 0.85rem;
+    color: var(--text-muted); background: var(--surface2); border-radius: 8px;
+    padding: 0.6rem 1rem; margin-bottom: 1rem; border: 1px solid var(--border);
+  }
+  .run-meta span { white-space: nowrap; }
+  .btn-rerun {
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    border-radius: 6px; padding: 0.3rem 0.8rem; cursor: pointer; font-size: 0.8rem;
+    margin-left: auto;
+  }
+
+  /* ── Metric Cards ────────────────────────────────── */
+  .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 1.5rem; }
+  .metric-card {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.8rem 1rem; text-align: center;
+  }
+  .metric-card .metric-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.3rem; }
+  .metric-card .metric-value { font-size: 1.3rem; font-weight: 700; }
+  .metric-card .metric-value.green { color: var(--green); }
+  .metric-card .metric-value.yellow { color: var(--yellow); }
+  .metric-card .metric-value.red { color: var(--red); }
+
+  /* ── Sub-tabs ────────────────────────────────────── */
+  .sub-tab-bar {
+    display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  .sub-tab-bar .stab {
+    padding: 0.5rem 1rem; cursor: pointer; font-size: 0.85rem;
+    border-bottom: 2px solid transparent; color: var(--text-muted); transition: 0.2s;
+  }
+  .sub-tab-bar .stab.active { color: var(--accent-blue); border-bottom-color: var(--accent-blue); font-weight: 600; }
+  .sub-tab-content { display: none; }
+  .sub-tab-content.active { display: block; }
+
+  /* ── Chart Placeholder ───────────────────────────── */
+  .chart-placeholder {
+    background: var(--surface2); border: 1px dashed var(--border); border-radius: 8px;
+    height: 350px; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; color: var(--text-muted); margin: 0.75rem 0;
+  }
+  .chart-placeholder .chart-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.3rem; color: var(--text); }
+  .chart-placeholder .chart-desc { font-size: 0.8rem; text-align: center; max-width: 500px; }
+
+  /* ── Radio Toggle ────────────────────────────────── */
+  .radio-toggle { display: flex; gap: 0; margin-bottom: 0.5rem; }
+  .radio-toggle .radio-opt {
+    padding: 0.3rem 0.8rem; font-size: 0.8rem; cursor: pointer;
+    border: 1px solid var(--border); color: var(--text-muted);
+  }
+  .radio-toggle .radio-opt:first-child { border-radius: 6px 0 0 6px; }
+  .radio-toggle .radio-opt:last-child { border-radius: 0 6px 6px 0; }
+  .radio-toggle .radio-opt.active { background: var(--accent-blue); color: white; border-color: var(--accent-blue); }
+
+  /* ── Data Table Placeholder ──────────────────────── */
+  .table-placeholder {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    overflow: hidden; margin: 0.75rem 0;
+  }
+  .table-placeholder table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  .table-placeholder th {
+    background: var(--surface); padding: 0.5rem 0.75rem; text-align: left;
+    border-bottom: 1px solid var(--border); color: var(--text-muted); font-weight: 600;
+  }
+  .table-placeholder td {
+    padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--border); color: var(--text);
+  }
+  .table-placeholder tr:last-child td { border-bottom: none; }
+  .btn-download {
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    border-radius: 6px; padding: 0.4rem 1rem; cursor: pointer; font-size: 0.8rem;
+    margin: 0.5rem 0;
+  }
+
+  /* ── Guardrail sub-section ───────────────────────── */
+  .gr-section { margin-bottom: 1rem; padding: 0.75rem; background: var(--surface); border-radius: 6px; }
+  .gr-section .gr-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; }
+
+  /* ── Section Label ───────────────────────────────── */
+  .section-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; }
+
+  /* ── Mockup Badge ────────────────────────────────── */
+  .mockup-badge {
+    position: fixed; top: 10px; right: 10px; background: var(--accent); color: white;
+    padding: 0.3rem 0.8rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600;
+    z-index: 999; opacity: 0.8;
+  }
+</style>
+</head>
+<body>
+
+<div class="mockup-badge">LAYOUT MOCKUP — NOT FUNCTIONAL</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SIDEBAR                                                            -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="sidebar">
+  <h1>💰 MyFinModel</h1>
+  <div class="caption">Retirement Spending Monte Carlo Simulator</div>
+  <div class="divider"></div>
+
+  <div class="section-label">Scenario Management</div>
+  <label>Save Current Inputs</label>
+  <div class="btn-row">
+    <input type="text" placeholder="Scenario name..." style="flex:2">
+    <button class="btn-save">Save</button>
+  </div>
+
+  <label>Load Scenario</label>
+  <select>
+    <option>— Select saved scenario —</option>
+    <option>Base Case (Growth 60/40)</option>
+    <option>Conservative Low Spend</option>
+  </select>
+  <div class="scenario-list">2 of 5 slots used</div>
+
+  <div class="divider"></div>
+
+  <button class="btn-run">▶ Run Simulation</button>
+
+  <div class="divider"></div>
+
+  <div class="help-text">
+    <strong>How to use</strong><br>
+    1. Configure your retirement scenario on the <strong>Inputs</strong> tab.<br>
+    2. Click <strong>Run Simulation</strong>.<br>
+    3. Review results on the <strong>Results</strong> tab.<br>
+    4. Save scenarios to compare different strategies.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- MAIN CONTENT                                                       -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="main">
+
+  <!-- Top-level tab bar -->
+  <div class="tab-bar" id="mainTabs">
+    <div class="tab active" data-tab="inputs">📋 Inputs</div>
+    <div class="tab" data-tab="results">📊 Results</div>
+  </div>
+
+  <!-- ═════════════════════════════════════════════════════════════════ -->
+  <!-- INPUTS TAB                                                       -->
+  <!-- ═════════════════════════════════════════════════════════════════ -->
+  <div class="tab-content active" id="inputs">
+
+    <!-- Section 1: Portfolio (expanded) -->
+    <div class="expander open" onclick="this.classList.toggle('open')">
+      <div class="expander-header">
+        💼 Portfolio
+        <span class="arrow">▶</span>
+      </div>
+      <div class="expander-body" onclick="event.stopPropagation()">
+        <div class="form-row">
+          <div class="form-group" style="flex:2">
+            <label>Starting Portfolio Value</label>
+            <input type="text" value="$1,000,000" style="font-size:1.1rem; font-weight:600">
+            <div class="help">Total investable assets at retirement start. Required.</div>
+          </div>
+        </div>
+
+        <div class="section-label" style="margin-top:0.75rem">Account Breakdown</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Taxable Account</label>
+            <input type="text" value="$400,000">
+          </div>
+          <div class="form-group">
+            <label>Tax-Deferred (IRA/401k)</label>
+            <input type="text" value="$400,000">
+          </div>
+          <div class="form-group">
+            <label>Roth</label>
+            <input type="text" value="$200,000">
+          </div>
+        </div>
+        <div class="warn-box">⚠ Account breakdown sum ($1,000,000) matches portfolio. ✓</div>
+
+        <div class="form-row" style="margin-top:0.75rem">
+          <div class="form-group">
+            <label>Unrealized Gain % (Taxable)</label>
+            <div class="slider-mock"><div class="thumb" style="left:30%"></div></div>
+            <span class="slider-value">30%</span>
+          </div>
+          <div class="form-group">
+            <label>LTCG Tax Rate</label>
+            <select class="dropdown-mock">
+              <option>0%</option>
+              <option selected>15%</option>
+              <option>20%</option>
+              <option>23.8% (incl. NIIT)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Ordinary Income Tax Rate</label>
+            <select class="dropdown-mock">
+              <option>10%</option>
+              <option>12%</option>
+              <option selected>22%</option>
+              <option>24%</option>
+              <option>32%</option>
+              <option>35%</option>
+              <option>37%</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Personal Information (expanded) -->
+    <div class="expander open" onclick="this.classList.toggle('open')">
+      <div class="expander-header">
+        👤 Personal Information
+        <span class="arrow">▶</span>
+      </div>
+      <div class="expander-body" onclick="event.stopPropagation()">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Current Age</label>
+            <input type="number" value="58">
+          </div>
+          <div class="form-group">
+            <label>Retirement Start Age</label>
+            <input type="number" value="60">
+          </div>
+          <div class="form-group">
+            <label>Filing Status</label>
+            <select class="dropdown-mock">
+              <option>Single</option>
+              <option>Married Filing Jointly</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Social Security Start Age</label>
+            <div class="slider-mock"><div class="thumb" style="left:62%"></div></div>
+            <span class="slider-value">67</span>
+            <div class="help">62 = reduced benefit, 67 = FRA, 70 = maximum delayed</div>
+          </div>
+          <div class="form-group">
+            <label>Planning Horizon (years)</label>
+            <input type="number" value="35">
+            <div class="help">Plan through age 95 (60 + 35)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Spending (expanded) -->
+    <div class="expander open" onclick="this.classList.toggle('open')">
+      <div class="expander-header">
+        💸 Spending
+        <span class="arrow">▶</span>
+      </div>
+      <div class="expander-body" onclick="event.stopPropagation()">
+        <div class="section-label">Spending Tiers (real dollars)</div>
+        <div class="tier-row">
+          <div class="tier-label">Tier 1</div>
+          <div class="tier-field"><label>Start Age</label><input type="number" value="60" style="width:70px"></div>
+          <div class="tier-field"><label>End Age</label><input type="number" value="66" style="width:70px"></div>
+          <div class="tier-field" style="flex:2"><label>Annual Spending</label><input type="text" value="$70,000"></div>
+          <button class="btn-remove">✕</button>
+        </div>
+        <div class="tier-row">
+          <div class="tier-label">Tier 2</div>
+          <div class="tier-field"><label>Start Age</label><input type="number" value="67" style="width:70px"></div>
+          <div class="tier-field"><label>End Age</label><input type="number" value="79" style="width:70px"></div>
+          <div class="tier-field" style="flex:2"><label>Annual Spending</label><input type="text" value="$55,000"></div>
+          <button class="btn-remove">✕</button>
+        </div>
+        <div class="tier-row">
+          <div class="tier-label">Tier 3</div>
+          <div class="tier-field"><label>Start Age</label><input type="number" value="80" style="width:70px"></div>
+          <div class="tier-field"><label>End Age</label><input type="number" value="94" style="width:70px"></div>
+          <div class="tier-field" style="flex:2"><label>Annual Spending</label><input type="text" value="$40,000"></div>
+          <button class="btn-remove">✕</button>
+        </div>
+        <button class="btn-add">+ Add Tier</button>
+
+        <div class="form-row" style="margin-top:1rem">
+          <div class="form-group">
+            <label>Spending Floor (min after guardrails)</label>
+            <input type="text" value="$25,000">
+          </div>
+          <div class="form-group">
+            <label>Spending Ceiling (max after guardrails)</label>
+            <input type="text" value="$100,000">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 4: Social Security (collapsed) -->
+    <div class="expander" onclick="this.classList.toggle('open')">
+      <div class="expander-header">
+        🏛 Social Security
+        <span class="arrow">▶</span>
+      </div>
+      <div class="expander-body" onclick="event.stopPropagation()">
+        <div class="toggle-row">
+          <div class="toggle-mock"></div>
+          <span>Enable Social Security</span>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Annual SS Benefit at Claiming Age</label>
+            <input type="text" value="$28,000">
+          </div>
+          <div class="form-group">
+            <label>SS COLA Rate</label>
+            <div class="slider-mock"><div class="thumb" style="left:50%"></div></div>
+            <span class="slider-value">2.5%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 5: Health Insurance (collapsed) -->
+    <div class="expander" onclick="this.classList.toggle('open')">
+      <div class="expander-header">
+        🏥 Health Insurance
+        <span class="arrow">▶</span>
+      </div>
+      <div class="expander-body" onclick="event.stopPropagation()">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Medicare Start Age</label>
+            <input type="number" value="65">
+          </div>
+          <div class="form-group">
+            <label>Annual Medicare Premium</label>
+            <input type="text" value="$3,600">
+          </div>
+        </div>
+        <div class="toggle-row" style="margin-top:0.75rem">
+          <div class="toggle-mock"></div>
+          <span>Enable ACA MAGI Guardrail</span>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>ACA MAGI Cliff</label>
+            <input type="text" value="$62,000">
+          </div>
+          <div class="form-group">
+            <label>ACA Safe Target MAGI</label>
+            <input type="text" value="$58,000">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Premium if Over Cliff</label>
+            <input type="text" value="$18,000">
+          </div>
+          <div class="form-group">
+            <label>Premium if Under Cliff</label>
+            <input type="text" value="$4,800">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 6: Portfolio Style / Market Assumptions (collapsed) -->
+    <div class="expander" onclick="this.classList.toggle('open')">
+      <div class="expander-header">
+        📊 Portfolio Style / Market Assumptions
+        <span class="arrow">▶</span>
+      </div>
+      <div class="expander-body" onclick="event.stopPropagation()">
+        <div class="form-group" style="margin-bottom:0.75rem">
+          <label>Portfolio Style Preset</label>
+          <select class="dropdown-mock">
+            <option>Conservative (Capital Preservation)</option>
+            <option>Moderate (Balanced)</option>
+            <option selected>Growth (Balanced Growth)</option>
+            <option>Aggressive Growth</option>
+            <option>Equity Only</option>
+            <option>Custom</option>
+          </select>
+        </div>
+        <div class="preset-desc">
+          60/40 equity/bond; classic retirement allocation.<br>
+          <em>These are long-run historical approximations. Actual future returns may differ materially.</em>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Expected Annual Return</label>
+            <div class="slider-mock"><div class="thumb" style="left:40%"></div></div>
+            <span class="slider-value">6.5%</span>
+          </div>
+          <div class="form-group">
+            <label>Return Standard Deviation</label>
+            <div class="slider-mock"><div class="thumb" style="left:38%"></div></div>
+            <span class="slider-value">12.0%</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Return–Inflation Correlation</label>
+            <div class="slider-mock"><div class="thumb" style="left:46%"></div></div>
+            <span class="slider-value">0.10</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Inflation Mean</label>
+            <div class="slider-mock"><div class="thumb" style="left:30%"></div></div>
+            <span class="slider-value">3.0%</span>
+          </div>
+          <div class="form-group">
+            <label>Inflation Std Dev</label>
+            <div class="slider-mock"><div class="thumb" style="left:30%"></div></div>
+            <span class="slider-value">1.5%</span>
+          </div>
+          <div class="form-group">
+            <label>Inflation Floor</label>
+            <div class="slider-mock"><div class="thumb" style="left:20%"></div></div>
+            <span class="slider-value">1.0%</span>
+          </div>
+        </div>
+
+        <div class="divider" style="border-top:1px solid var(--border); margin:1rem 0"></div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Simulation Paths</label>
+            <div class="slider-mock"><div class="thumb" style="left:20%"></div></div>
+            <span class="slider-value">1,000</span>
+          </div>
+          <div class="form-group">
+            <label>Lock random seed</label>
+            <div class="toggle-row">
+              <div class="toggle-mock off"></div>
+              <span style="font-size:0.8rem; color:var(--text-muted)">Off — new random seed each run</span>
+            </div>
+            <div class="help">Turn on to fix the seed for reproducible results.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 7: Guardrail Thresholds (collapsed) -->
+    <div class="expander" onclick="this.classList.toggle('open')">
+      <div class="expander-header">
+        🛡 Guardrail Thresholds
+        <span class="arrow">▶</span>
+      </div>
+      <div class="expander-body" onclick="event.stopPropagation()">
+
+        <!-- Inflation Guardrail -->
+        <div class="gr-section">
+          <div class="toggle-row">
+            <div class="toggle-mock"></div>
+            <span class="gr-title">Inflation Guardrail</span>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Inflation Trigger Rate</label>
+              <div class="slider-mock"><div class="thumb" style="left:31%"></div></div>
+              <span class="slider-value">4.5%</span>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Spending Cut %</label>
+              <div class="slider-mock"><div class="thumb" style="left:17%"></div></div>
+              <span class="slider-value">5%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Portfolio Value Guardrail -->
+        <div class="gr-section">
+          <div class="toggle-row">
+            <div class="toggle-mock"></div>
+            <span class="gr-title">Portfolio Value Guardrail</span>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Portfolio Floor (% of starting portfolio)</label>
+              <div class="slider-mock"><div class="thumb" style="left:50%"></div></div>
+              <span class="slider-value">50%</span>
+            </div>
+            <div class="form-group">
+              <label>Portfolio Ceiling (% of starting portfolio)</label>
+              <div class="slider-mock"><div class="thumb" style="left:21%"></div></div>
+              <span class="slider-value">150%</span>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Spending Cut %</label>
+              <div class="slider-mock"><div class="thumb" style="left:20%"></div></div>
+              <span class="slider-value">10%</span>
+            </div>
+            <div class="form-group">
+              <label>Spending Raise %</label>
+              <div class="slider-mock"><div class="thumb" style="left:20%"></div></div>
+              <span class="slider-value">10%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Withdrawal Rate Guardrail -->
+        <div class="gr-section">
+          <div class="toggle-row">
+            <div class="toggle-mock"></div>
+            <span class="gr-title">Withdrawal Rate Guardrail</span>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Low Rate</label>
+              <div class="slider-mock"><div class="thumb" style="left:28%"></div></div>
+              <span class="slider-value">3.0%</span>
+            </div>
+            <div class="form-group">
+              <label>Warning Rate</label>
+              <div class="slider-mock"><div class="thumb" style="left:40%"></div></div>
+              <span class="slider-value">5.0%</span>
+            </div>
+            <div class="form-group">
+              <label>Critical Rate</label>
+              <div class="slider-mock"><div class="thumb" style="left:50%"></div></div>
+              <span class="slider-value">6.5%</span>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Low — raise spending</label>
+              <span class="slider-value">5%</span>
+            </div>
+            <div class="form-group">
+              <label>Warn — cut spending</label>
+              <span class="slider-value">5%</span>
+            </div>
+            <div class="form-group">
+              <label>Critical — cut spending</label>
+              <span class="slider-value">15%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ACA MAGI Guardrail -->
+        <div class="gr-section">
+          <div class="toggle-row">
+            <div class="toggle-mock"></div>
+            <span class="gr-title">ACA MAGI Guardrail</span>
+          </div>
+          <div class="info-box">ℹ Conditional on ACA guardrail being enabled in Health Insurance section above.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Validation summary area -->
+    <div style="margin-top:1rem">
+      <div class="info-box">✓ All inputs valid. Ready to run simulation.</div>
+    </div>
+
+  </div><!-- end #inputs -->
+
+  <!-- ═════════════════════════════════════════════════════════════════ -->
+  <!-- RESULTS TAB                                                      -->
+  <!-- ═════════════════════════════════════════════════════════════════ -->
+  <div class="tab-content" id="results">
+
+    <!-- Stale results banner (shown when inputs changed) -->
+    <div class="stale-banner" style="display:none" id="staleBanner">
+      ⚠ Inputs changed — click <strong>Run Simulation</strong> to refresh results.
+    </div>
+
+    <!-- Run metadata row -->
+    <div class="run-meta">
+      <span><strong>1,000</strong> paths</span>
+      <span>×</span>
+      <span><strong>35</strong> years</span>
+      <span>│</span>
+      <span>Seed: <strong>738291</strong></span>
+      <span>│</span>
+      <span>Runtime: <strong>0.82s</strong></span>
+      <button class="btn-rerun">🔄 Re-run</button>
+    </div>
+
+    <!-- Summary Dashboard -->
+    <div class="metric-grid">
+      <div class="metric-card">
+        <div class="metric-label">Survival Rate</div>
+        <div class="metric-value green">87.3%</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Median Final Portfolio</div>
+        <div class="metric-value">$1.24M</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">10th Pct Final</div>
+        <div class="metric-value yellow">$82K</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">90th Pct Final</div>
+        <div class="metric-value">$3.81M</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Avg Annual Spending</div>
+        <div class="metric-value">$52,400</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Median Withdrawal Rate</div>
+        <div class="metric-value">4.2%</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Active Guardrails</div>
+        <div class="metric-value">3 of 4</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Inflation Floor</div>
+        <div class="metric-value">1.0%</div>
+      </div>
+    </div>
+
+    <!-- Results sub-tabs -->
+    <div class="sub-tab-bar" id="resultSubTabs">
+      <div class="stab active" data-stab="metrics">Success Metrics</div>
+      <div class="stab" data-stab="portfolio">Portfolio</div>
+      <div class="stab" data-stab="spending">Spending</div>
+      <div class="stab" data-stab="analysis">Analysis</div>
+      <div class="stab" data-stab="taxeff">Tax Efficiency</div>
+      <div class="stab" data-stab="rawdata">Raw Data</div>
+      <div class="stab" data-stab="compare" style="color:var(--accent-blue)">⚖ Compare</div>
+    </div>
+
+    <!-- Sub-tab: Success Metrics -->
+    <div class="sub-tab-content active" id="metrics">
+      <h3 style="font-size:1rem; margin-bottom:0.75rem">Success Metrics Summary</h3>
+
+      <div class="section-label">Portfolio Outcomes</div>
+      <div class="table-placeholder">
+        <table>
+          <tr><th style="width:60%">Metric</th><th>Value</th></tr>
+          <tr><td>Survival Rate</td><td>87.3%</td></tr>
+          <tr><td>Paths Depleted</td><td>127</td></tr>
+          <tr><td>Median Final Portfolio (nominal)</td><td>$1,243,500</td></tr>
+          <tr><td>Median Final Portfolio (real)</td><td>$472,100</td></tr>
+          <tr><td>10th Pct Final</td><td>$82,300</td></tr>
+          <tr><td>90th Pct Final</td><td>$3,812,000</td></tr>
+          <tr><td>Median Year of Depletion (age)</td><td>Age 89</td></tr>
+          <tr><td>Median Peak Portfolio</td><td>$1,890,000</td></tr>
+        </table>
+      </div>
+
+      <div class="section-label" style="margin-top:1rem">Guardrail Trigger Frequencies</div>
+      <div class="table-placeholder">
+        <table>
+          <tr><th style="width:60%">Event</th><th>% of Paths</th></tr>
+          <tr><td>Inflation — spending cut (at least once)</td><td>45.6%</td></tr>
+          <tr><td>Portfolio Value — spending cut (at least once)</td><td>34.2%</td></tr>
+          <tr><td>Portfolio Value — spending raise (at least once)</td><td>18.7%</td></tr>
+          <tr><td>Withdrawal Rate — warning cut (at least once)</td><td>22.1%</td></tr>
+          <tr><td>Withdrawal Rate — critical cut (at least once)</td><td>8.4%</td></tr>
+          <tr><td>Withdrawal Rate — low raise (at least once)</td><td>5.1%</td></tr>
+          <tr><td>ACA MAGI — cliff breach (at least once)</td><td>—</td></tr>
+          <tr><td>No guardrail ever triggered</td><td>12.3%</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Sub-tab: Portfolio -->
+    <div class="sub-tab-content" id="portfolio">
+      <div class="radio-toggle">
+        <div class="radio-opt active">Nominal</div>
+        <div class="radio-opt">Real (Inflation-Adjusted)</div>
+      </div>
+      <div class="chart-placeholder">
+        <div class="chart-title">Portfolio Value by Age — Percentile Fan (1,000 paths)</div>
+        <div class="chart-desc">
+          5 percentile bands (10th/25th/50th/75th/90th)<br>
+          Shaded 10th–90th band • Bold median line<br>
+          Vertical lines: SS Begins @ 67 │ Medicare @ 65<br>
+          X-axis: Age 60 → 94
+        </div>
+      </div>
+    </div>
+
+    <!-- Sub-tab: Spending -->
+    <div class="sub-tab-content" id="spending">
+      <div class="radio-toggle">
+        <div class="radio-opt active">Nominal</div>
+        <div class="radio-opt">Real</div>
+      </div>
+      <div class="chart-placeholder">
+        <div class="chart-title">Annual Spending by Age — Guardrail-Adjusted (1,000 paths)</div>
+        <div class="chart-desc">
+          5 percentile bands • Floor/ceiling dashed lines<br>
+          SS start + Medicare vertical annotations<br>
+          Shows tier transitions (e.g., $70K → $55K → $40K)
+        </div>
+      </div>
+    </div>
+
+    <!-- Sub-tab: Analysis (Guardrails + Inflation combined) -->
+    <div class="sub-tab-content" id="analysis">
+      <div class="chart-placeholder" style="height:300px">
+        <div class="chart-title">Guardrail Events by Age (stacked bar)</div>
+        <div class="chart-desc">
+          Stacked bars: PV-DOWN (red) | PV-UP (green) | WR-WARN (orange)<br>
+          WR-CRIT (crimson) | WR-LOW (teal) | ACA-BREACH (purple) | INF (amber)
+        </div>
+      </div>
+      <div style="display:flex; gap:1rem">
+        <div class="chart-placeholder" style="height:250px; flex:1">
+          <div class="chart-title">Survival Rate Donut</div>
+          <div class="chart-desc">
+            Survived (green) vs Depleted (red)<br>
+            Center: 87.3%
+          </div>
+        </div>
+        <div class="chart-placeholder" style="height:250px; flex:2">
+          <div class="chart-title">Inflation Path Distribution by Age</div>
+          <div class="chart-desc">
+            10th/50th/90th fan • Reference lines:<br>
+            Inflation Floor (1%) │ Mean (3%) │ GR4 Trigger (4.5%)
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sub-tab: Tax Efficiency -->
+    <div class="sub-tab-content" id="taxeff">
+      <div class="radio-toggle">
+        <div class="radio-opt active">Fan Chart</div>
+        <div class="radio-opt">Box Plot</div>
+      </div>
+      <div class="chart-placeholder">
+        <div class="chart-title">Withdrawal Rate by Age — Distribution Across Paths</div>
+        <div class="chart-desc">
+          Reference lines: 4.0% (safe rate) │ 5.0% (GR2 warning) │ 6.5% (GR2 critical)<br>
+          Toggle between fan chart and box plot views
+        </div>
+      </div>
+    </div>
+
+    <!-- Sub-tab: Raw Data -->
+    <div class="sub-tab-content" id="rawdata">
+      <div class="section-label">Table 1 — Percentile Portfolio Paths</div>
+      <div class="table-placeholder">
+        <table>
+          <tr><th>Age</th><th>Year</th><th>10th</th><th>25th</th><th>Median</th><th>75th</th><th>90th</th></tr>
+          <tr><td>60</td><td>1</td><td>$912K</td><td>$948K</td><td>$998K</td><td>$1.05M</td><td>$1.10M</td></tr>
+          <tr><td>61</td><td>2</td><td>$845K</td><td>$910K</td><td>$1.01M</td><td>$1.11M</td><td>$1.22M</td></tr>
+          <tr><td>62</td><td>3</td><td>$780K</td><td>$878K</td><td>$1.02M</td><td>$1.18M</td><td>$1.35M</td></tr>
+          <tr><td colspan="7" style="text-align:center; color:var(--text-muted)">... 32 more rows ...</td></tr>
+        </table>
+      </div>
+      <button class="btn-download">📥 Download CSV — Percentile Portfolio Paths</button>
+
+      <div class="section-label" style="margin-top:1.5rem">Table 5 — Full Path Data Export</div>
+      <div class="warn-box">⚠ Full path export for 1,000 paths × 35 years = 35,000 rows. File size ~3.5 MB.</div>
+      <button class="btn-download">📥 Generate & Download Full Path Data</button>
+    </div>
+
+    <!-- Sub-tab: Compare -->
+    <div class="sub-tab-content" id="compare">
+      <div class="info-box">⚖ Comparing: <strong>Base Case (Growth 60/40)</strong> vs <strong>Conservative Low Spend</strong></div>
+
+      <div class="section-label" style="margin-top:1rem">Side-by-Side Metrics</div>
+      <div class="table-placeholder">
+        <table>
+          <tr><th style="width:40%">Metric</th><th>Base Case</th><th>Conservative</th><th>Delta</th></tr>
+          <tr><td>Survival Rate</td><td>87.3%</td><td>94.1%</td><td style="color:var(--green)">+6.8%</td></tr>
+          <tr><td>Median Final Portfolio</td><td>$1.24M</td><td>$890K</td><td style="color:var(--red)">−$350K</td></tr>
+          <tr><td>Avg Annual Spending</td><td>$52,400</td><td>$38,200</td><td style="color:var(--red)">−$14,200</td></tr>
+          <tr><td>Median Withdrawal Rate</td><td>4.2%</td><td>3.1%</td><td style="color:var(--green)">−1.1%</td></tr>
+        </table>
+      </div>
+
+      <div class="chart-placeholder" style="margin-top:1rem">
+        <div class="chart-title">Median Portfolio Comparison — Overlaid Fan</div>
+        <div class="chart-desc">
+          Two 50th percentile lines overlaid<br>
+          Base Case (blue) vs Conservative (orange)<br>
+          Same age X-axis, shared Y-axis scale
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end #results -->
+
+</div><!-- end .main -->
+
+<script>
+  // Top-level tab switching
+  document.querySelectorAll('#mainTabs .tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('#mainTabs .tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.tab).classList.add('active');
+    });
+  });
+
+  // Results sub-tab switching
+  document.querySelectorAll('#resultSubTabs .stab').forEach(stab => {
+    stab.addEventListener('click', () => {
+      document.querySelectorAll('#resultSubTabs .stab').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
+      stab.classList.add('active');
+      document.getElementById(stab.dataset.stab).classList.add('active');
+    });
+  });
+
+  // Radio toggle switching
+  document.querySelectorAll('.radio-toggle').forEach(group => {
+    group.querySelectorAll('.radio-opt').forEach(opt => {
+      opt.addEventListener('click', () => {
+        group.querySelectorAll('.radio-opt').forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+      });
+    });
+  });
+</script>
+
+</body>
+</html>
