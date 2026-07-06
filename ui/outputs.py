@@ -79,17 +79,13 @@ def _metric_summary(results: SimulationResults) -> _DisplayMetrics:
 
 
 def _median_depletion_age(results: SimulationResults) -> str:
-    depletion_years: list[int] = []
-    for path in range(results.n_paths):
-        idx = np.where(results.portfolio[path, :] <= 0)[0]
-        if idx.size:
-            depletion_years.append(int(idx[0]))
-
-    if not depletion_years:
+    depleted_mask = results.portfolio <= 0
+    any_depleted = np.any(depleted_mask, axis=1)
+    if not np.any(any_depleted):
         return "N/A - All paths survived"
-
-    med_year = int(np.median(np.array(depletion_years)))
-    return f"Age {results.inputs.retire_age + med_year}"
+    first_depletion_idx = np.argmax(depleted_mask[any_depleted], axis=1)
+    med_year = int(np.median(first_depletion_idx))
+    return f"Age {results.ages[med_year]}"
 
 
 def _success_metrics_table(results: SimulationResults, *, show_extended: bool = False) -> pd.DataFrame:
@@ -110,7 +106,7 @@ def _success_metrics_table(results: SimulationResults, *, show_extended: bool = 
         {"Category": "Portfolio Outcomes", "Metric": "90th Percentile Final (nominal)", "Value": f"${np.percentile(final_nominal, 90):,.0f}"},
         {"Category": "Portfolio Outcomes", "Metric": "Median Depletion Age", "Value": _median_depletion_age(results)},
         {"Category": "Portfolio Outcomes", "Metric": "Median Peak Portfolio", "Value": f"${_safe_median(np.max(results.portfolio, axis=1)):,.0f}"},
-        {"Category": "Portfolio Outcomes", "Metric": "Median Age of Peak Portfolio", "Value": f"Age {results.inputs.retire_age + int(np.median(np.argmax(results.portfolio, axis=1)))}"},
+        {"Category": "Portfolio Outcomes", "Metric": "Median Age of Peak Portfolio", "Value": f"Age {results.ages[int(np.median(np.argmax(results.portfolio, axis=1)))]}"},
         {"Category": "Portfolio Outcomes", "Metric": "Maximum Portfolio Observed", "Value": f"${float(np.max(results.portfolio)):,.0f}"},
         {"Category": "Spending Outcomes", "Metric": "Average Annual Spending - All Path-Years (nominal)", "Value": f"${_safe_mean(results.spend):,.0f}"},
         {"Category": "Spending Outcomes", "Metric": "Average Annual Spending - Surviving Path-Years (nominal)", "Value": f"${_safe_mean(results.spend[alive_mask]):,.0f}"},
