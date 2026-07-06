@@ -21,3 +21,7 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-m 'not slow'"
+markers = [
+    "slow: marks tests as slow / performance benchmarks (deselected by default, run with '-m slow')",
+]

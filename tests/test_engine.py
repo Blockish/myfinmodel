@@ -626,6 +626,7 @@ class TestEdgeCases:
 class TestPerformance:
     """Spec §3.7: 1000 paths × 35 years < 5 seconds."""
 
+    @pytest.mark.slow
     def test_benchmark_1000x35(self):
         inputs = _simple_inputs(n_paths=1000, plan_years=35)
         start = time.perf_counter()
