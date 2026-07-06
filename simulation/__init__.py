@@ -20,16 +20,7 @@ from .models import (
     SpendingTier,
 )
 
-# Legacy re-exports kept until app.py is rewritten (Phase 3–5).
-from .models import (  # noqa: F811
-    GuardrailModel,
-    SimulationParams,
-    SimulationResult,
-    SimulationSummary,
-)
-
 __all__ = [
-    # Phase 2 API
     "run_simulation",
     "get_base_spend",
     "apply_gr1",
@@ -45,9 +36,4 @@ __all__ = [
     "GuardrailGR3Config",
     "GuardrailGR4Config",
     "HealthInsuranceConfig",
-    # Legacy (remove after Phase 3–5 UI rewrite)
-    "GuardrailModel",
-    "SimulationParams",
-    "SimulationResult",
-    "SimulationSummary",
 ]
