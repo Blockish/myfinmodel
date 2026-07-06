@@ -6,6 +6,7 @@ import pytest
 
 from simulation.models import (
     GuardrailGR2Config,
+    GuardrailGR3Config,
     HealthInsuranceConfig,
     SimulationInputs,
     SpendingTier,
@@ -298,12 +299,26 @@ class TestACAValidation:
         result = validate_inputs(inputs)
         assert not any("MAGI" in err and "target" in err for err in result.errors)
 
-    def test_aca_ordering_skipped_when_disabled(self):
+    def test_aca_ordering_skipped_when_aca_disabled(self):
         """B8: ACA MAGI ordering check is skipped when ACA guardrail is disabled."""
         inputs = SimulationInputs(
             port_start=1_000_000.0,
             health=HealthInsuranceConfig(
                 aca_guardrail_enabled=False,
+                aca_magi_target=70_000.0,
+                aca_magi_cliff=60_000.0,  # target > cliff — would fail if checked
+            ),
+        )
+        result = validate_inputs(inputs)
+        assert not any("MAGI" in err for err in result.errors)
+
+    def test_aca_ordering_skipped_when_gr3_disabled(self):
+        """B8: ACA MAGI ordering check is skipped when GR3 is disabled."""
+        inputs = SimulationInputs(
+            port_start=1_000_000.0,
+            gr3=GuardrailGR3Config(enabled=False),
+            health=HealthInsuranceConfig(
+                aca_guardrail_enabled=True,
                 aca_magi_target=70_000.0,
                 aca_magi_cliff=60_000.0,  # target > cliff — would fail if checked
             ),

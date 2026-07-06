@@ -299,8 +299,9 @@ def _compare_candidates() -> dict[str, SimulationResults]:
 def render_outputs(results: SimulationResults) -> None:
     """Render full Phase 4 results UI for a completed simulation."""
 
-    # ── Spec §7.5: All-paths-deplete error card ──────────────────────────────
-    if results.success_rate() == 0.0:
+    # ── Spec §7.4 / §7.5: outcome banners ────────────────────────────────────
+    survival = results.success_rate()
+    if survival == 0.0:
         st.error(
             "**All simulation paths depleted before the end of the planning horizon.**\n\n"
             "Consider:\n"
@@ -310,9 +311,7 @@ def render_outputs(results: SimulationResults) -> None:
             "- Verifying your inputs",
             icon="🚨",
         )
-
-    # ── Spec §7.4: All-paths-survive success indicator ───────────────────────
-    if results.success_rate() == 1.0:
+    elif survival == 1.0:
         st.success(
             "All simulation paths survived to the final year — no portfolio depletion detected.",
             icon="✅",

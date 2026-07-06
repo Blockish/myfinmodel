@@ -99,7 +99,8 @@ def validate_inputs(inputs: SimulationInputs) -> ValidationResult:
         errors.append(f"Inflation standard deviation ({inputs.inf_std}) must be > 0.")
 
     # B8: ACA MAGI thresholds must be ordered: target < cliff (only when ACA guardrail active)
-    if inputs.health.aca_guardrail_enabled and inputs.health.aca_magi_target >= inputs.health.aca_magi_cliff:
+    aca_active = inputs.gr3.enabled and inputs.health.aca_guardrail_enabled
+    if aca_active and inputs.health.aca_magi_target >= inputs.health.aca_magi_cliff:
         errors.append(
             f"ACA MAGI target ({inputs.health.aca_magi_target}) must be < cliff ({inputs.health.aca_magi_cliff})."
         )
