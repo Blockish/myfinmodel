@@ -116,8 +116,8 @@ def _success_metrics_table(results: SimulationResults, *, show_extended: bool = 
         {"Category": "Spending Outcomes", "Metric": "Average Annual Spending - Surviving Path-Years (nominal)", "Value": f"${_safe_mean(results.spend[alive_mask]):,.0f}"},
         {"Category": "Spending Outcomes", "Metric": "Average Annual Spending - Surviving Path-Years (real)", "Value": f"${_safe_mean(results.real_spend[alive_mask]):,.0f}"},
         {"Category": "Spending Outcomes", "Metric": "Median Year-1 Spending (nominal)", "Value": f"${_safe_median(results.spend[:, 0]):,.0f}"},
-        {"Category": "Spending Outcomes", "Metric": "Median Year-10 Spending", "Value": f"${_safe_median(results.spend[:, min(9, results.plan_years - 1)]):,.0f} nominal / ${_safe_median(results.real_spend[:, min(9, results.plan_years - 1)]):,.0f} real"},
-        {"Category": "Spending Outcomes", "Metric": "Median Year-20 Spending", "Value": f"${_safe_median(results.spend[:, min(19, results.plan_years - 1)]):,.0f} nominal / ${_safe_median(results.real_spend[:, min(19, results.plan_years - 1)]):,.0f} real"},
+        {"Category": "Spending Outcomes", "Metric": f"Median Year-{min(10, results.plan_years)} Spending", "Value": f"${_safe_median(results.spend[:, min(9, results.plan_years - 1)]):,.0f} nominal / ${_safe_median(results.real_spend[:, min(9, results.plan_years - 1)]):,.0f} real"},
+        {"Category": "Spending Outcomes", "Metric": f"Median Year-{min(20, results.plan_years)} Spending", "Value": f"${_safe_median(results.spend[:, min(19, results.plan_years - 1)]):,.0f} nominal / ${_safe_median(results.real_spend[:, min(19, results.plan_years - 1)]):,.0f} real"},
         {"Category": "Guardrail Trigger Frequencies", "Metric": "% paths with PV-DOWN at least once", "Value": f"{np.mean(np.any(events == 'PV-DOWN', axis=1)) * 100:.1f}%"},
         {"Category": "Guardrail Trigger Frequencies", "Metric": "% paths with PV-UP at least once", "Value": f"{np.mean(np.any(events == 'PV-UP', axis=1)) * 100:.1f}%"},
         {"Category": "Guardrail Trigger Frequencies", "Metric": "% paths with WR-WARN at least once", "Value": f"{np.mean(np.any(events == 'WR-WARN', axis=1)) * 100:.1f}%"},
@@ -138,22 +138,22 @@ def _success_metrics_table(results: SimulationResults, *, show_extended: bool = 
             [
                 {
                     "Category": "Spending Outcomes (Extended)",
-                    "Metric": "Median Year-10 Spending (nominal)",
+                    "Metric": f"Median Year-{min(10, results.plan_years)} Spending (nominal)",
                     "Value": f"${_safe_median(results.spend[:, min(9, results.plan_years - 1)]):,.0f}",
                 },
                 {
                     "Category": "Spending Outcomes (Extended)",
-                    "Metric": "Median Year-10 Spending (real)",
+                    "Metric": f"Median Year-{min(10, results.plan_years)} Spending (real)",
                     "Value": f"${_safe_median(results.real_spend[:, min(9, results.plan_years - 1)]):,.0f}",
                 },
                 {
                     "Category": "Spending Outcomes (Extended)",
-                    "Metric": "Median Year-20 Spending (nominal)",
+                    "Metric": f"Median Year-{min(20, results.plan_years)} Spending (nominal)",
                     "Value": f"${_safe_median(results.spend[:, min(19, results.plan_years - 1)]):,.0f}",
                 },
                 {
                     "Category": "Spending Outcomes (Extended)",
-                    "Metric": "Median Year-20 Spending (real)",
+                    "Metric": f"Median Year-{min(20, results.plan_years)} Spending (real)",
                     "Value": f"${_safe_median(results.real_spend[:, min(19, results.plan_years - 1)]):,.0f}",
                 },
             ]
@@ -609,7 +609,7 @@ def render_outputs(results: SimulationResults) -> None:
                                 "Metric": metric,
                                 base_name: f"${va:,.0f}",
                                 compare_name: f"${vb:,.0f}",
-                                "Delta (B - A)": f"${delta:,.0f}",
+                                "Delta (B \u2212 A)": f"${delta:+,.0f}",
                             }
                         )
                     else:
@@ -618,7 +618,7 @@ def render_outputs(results: SimulationResults) -> None:
                                 "Metric": metric,
                                 base_name: f"{va:.1f}%",
                                 compare_name: f"{vb:.1f}%",
-                                "Delta (B - A)": f"{delta:.1f}%",
+                                "Delta (B \u2212 A)": f"{delta:+.1f} pp",
                             }
                         )
 
@@ -627,9 +627,9 @@ def render_outputs(results: SimulationResults) -> None:
                 # Guard for mismatched horizons between scenarios
                 if a.plan_years != b.plan_years or a.ages[0] != b.ages[0]:
                     st.warning(
-                        f"Scenario horizons differ ({base_name}: ages {a.ages[0]}-{a.ages[-1]}, "
-                        f"{compare_name}: ages {b.ages[0]}-{b.ages[-1]}). "
-                        "Overlay chart uses each scenario's own age axis; visual comparison may be limited.",
+                        f"Scenario horizons differ ({base_name}: ages {a.ages[0]}\u2013{a.ages[-1]}, "
+                        f"{compare_name}: ages {b.ages[0]}\u2013{b.ages[-1]}). "
+                        "Both series are padded onto a combined age axis; gaps appear where a scenario has no data.",
                         icon="⚠️",
                     )
 
