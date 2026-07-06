@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MyFinModel — Results Tables & Charts Mockup</title>
+<style>
+  :root {
+    --bg: #f4f6f4;
+    --surface: #ffffff;
+    --surface2: #f7f9f7;
+    --text: #13231a;
+    --text-muted: #5f7468;
+    --accent: #0f766e;
+    --accent-blue: #1d4ed8;
+    --border: #d6ddd8;
+    --green: #1b8f4d;
+    --yellow: #b97905;
+    --red: #b42318;
+    --shadow: 0 12px 30px rgba(16, 24, 20, 0.07);
+    --font: "Segoe UI", "Segoe UI Variable", Tahoma, sans-serif;
+    --metric-bg: #ffffff;
+    --metric-border: #d6ddd8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    background:
+      radial-gradient(1200px 500px at -20% -15%, #e0f2e8 0%, transparent 65%),
+      radial-gradient(1000px 500px at 120% -10%, #dbeafe 0%, transparent 60%),
+      var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  .main {
+    max-width: 1200px;
+    margin: 24px auto 40px;
+    padding: 0 18px;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #e7f0ec;
+    color: #1f5f47;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    margin-bottom: 10px;
+  }
+
+  h1 { font-size: 28px; margin-bottom: 8px; }
+  .subtitle { color: var(--text-muted); max-width: 900px; }
+
+  .stale-banner {
+    margin-top: 12px;
+    background: #fff8e1;
+    border: 1px solid #f0b429;
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #8c5300;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .run-meta {
+    margin-top: 12px;
+    display: flex;
+    gap: 1.2rem;
+    align-items: center;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+
+  .run-meta span { white-space: nowrap; }
+
+  .btn-rerun {
+    margin-left: auto;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+
+  .metric-grid {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+  }
+
+  .metric-card {
+    background: var(--metric-bg);
+    border: 1px solid var(--metric-border);
+    border-radius: 10px;
+    padding: 0.8rem 1rem;
+    box-shadow: var(--shadow);
+    text-align: center;
+  }
+
+
+  .metric-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.3rem; }
+  .metric-value { font-size: 1.3rem; font-weight: 700; }
+  .metric-value.green { color: var(--green); }
+  .metric-value.yellow { color: var(--yellow); }
+  .metric-value.red { color: var(--red); }
+
+  .sub-tab-bar {
+    margin-top: 16px;
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .sub-tab-bar .stab {
+    padding: 0.55rem 1rem;
+    cursor: pointer;
+    font-size: 0.86rem;
+    border-bottom: 2px solid transparent;
+    color: var(--text-muted);
+    transition: 0.2s;
+    font-weight: 600;
+  }
+
+  .sub-tab-bar .stab.active {
+    color: var(--accent-blue);
+    border-bottom-color: var(--accent-blue);
+  }
+
+  .sub-tab-content {
+    display: none;
+    margin-top: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: var(--shadow);
+  }
+
+  .sub-tab-content.active { display: block; }
+
+  .section-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+  }
+
+  .table-placeholder {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 0.75rem 0;
+  }
+
+  .table-placeholder table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+
+  .table-placeholder th {
+    background: #eef3ef;
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.4px;
+  }
+
+  .table-placeholder td {
+    padding: 0.45rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .table-placeholder tr:last-child td { border-bottom: none; }
+
+  .radio-toggle {
+    display: flex;
+    gap: 0;
+    margin-bottom: 0.5rem;
+  }
+
+  .radio-toggle .radio-opt {
+    padding: 0.35rem 0.8rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    background: #fff;
+  }
+
+  .radio-toggle .radio-opt:first-child { border-radius: 6px 0 0 6px; }
+  .radio-toggle .radio-opt:last-child { border-radius: 0 6px 6px 0; }
+  .radio-toggle .radio-opt.active {
+    background: #dbeafe;
+    color: #1e40af;
+    border-color: #93c5fd;
+  }
+
+  .chart-placeholder {
+    background: var(--surface2);
+    border: 1px dashed #b7c4be;
+    border-radius: 10px;
+    height: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    color: var(--text-muted);
+    margin: 0.75rem 0;
+    text-align: center;
+    padding: 12px;
+    background-image:
+      linear-gradient(180deg, rgba(15,118,110,0.06), transparent 38%),
+      repeating-linear-gradient(
+        to right,
+        transparent,
+        transparent 54px,
+        rgba(148,163,155,0.2) 54px,
+        rgba(148,163,155,0.2) 55px
+      );
+  }
+
+  .chart-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.35rem;
+  }
+
+  .chart-desc { font-size: 0.82rem; max-width: 560px; }
+
+  .warn-box {
+    background: #fffbeb;
+    border: 1px solid #f1c40f;
+    border-radius: 8px;
+    padding: 0.55rem 0.8rem;
+    font-size: 0.82rem;
+    color: #8a6708;
+    margin: 0.5rem 0;
+    font-weight: 600;
+  }
+
+  .btn-download {
+    display: inline-block;
+    background: #0f766e;
+    color: #fff;
+    border-radius: 7px;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-top: 0.45rem;
+  }
+
+  .analysis-split {
+    display: flex;
+    gap: 0.9rem;
+  }
+
+  .analysis-split .left { flex: 1; }
+  .analysis-split .right { flex: 2; }
+
+  @media (max-width: 1020px) {
+    .metric-grid { grid-template-columns: repeat(2, 1fr); }
+    .analysis-split { flex-direction: column; }
+  }
+
+  @media (max-width: 640px) {
+    h1 { font-size: 24px; }
+    .run-meta { flex-wrap: wrap; }
+    .btn-rerun { margin-left: 0; }
+    .metric-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="main">
+  <div class="badge">RESULTS REVIEW MOCKUP — NOT FUNCTIONAL</div>
+  <h1>Results Tables and Charts Preview</h1>
+  <p class="subtitle">
+    Updated to match ui-mockup Results behavior: only the active tab content is shown.
+  </p>
+
+  <div class="stale-banner">
+    Inputs changed — click <strong>Run Simulation</strong> to refresh results.
+  </div>
+
+  <div class="run-meta">
+    <span><strong>1,000</strong> paths</span>
+    <span>x</span>
+    <span><strong>35</strong> years</span>
+    <span>|</span>
+    <span>Seed: <strong>738291</strong></span>
+    <span>|</span>
+    <span>Runtime: <strong>0.88s</strong></span>
+    <button class="btn-rerun">Re-run</button>
+  </div>
+
+  <div class="metric-grid">
+    <div class="metric-card"><div class="metric-label">Survival Rate</div><div class="metric-value green">87.3%</div></div>
+    <div class="metric-card"><div class="metric-label">Median Final Portfolio</div><div class="metric-value">$1.24M</div></div>
+    <div class="metric-card"><div class="metric-label">10th Pct Final</div><div class="metric-value yellow">$82K</div></div>
+    <div class="metric-card"><div class="metric-label">90th Pct Final</div><div class="metric-value">$3.81M</div></div>
+    <div class="metric-card"><div class="metric-label">Avg Annual Spending</div><div class="metric-value">$52,400</div></div>
+    <div class="metric-card"><div class="metric-label">Median Withdrawal Rate</div><div class="metric-value">4.2%</div></div>
+    <div class="metric-card"><div class="metric-label">Active Guardrails</div><div class="metric-value">3 of 4</div></div>
+    <div class="metric-card"><div class="metric-label">Inflation Floor</div><div class="metric-value">1.0%</div></div>
+  </div>
+
+  <div class="sub-tab-bar" id="resultSubTabs">
+    <div class="stab active" data-stab="metrics">Success Metrics</div>
+    <div class="stab" data-stab="portfolio">Portfolio</div>
+    <div class="stab" data-stab="spending">Spending</div>
+    <div class="stab" data-stab="analysis">Analysis</div>
+    <div class="stab" data-stab="taxeff">Tax Efficiency</div>
+    <div class="stab" data-stab="rawdata">Raw Data</div>
+    <div class="stab" data-stab="compare">Compare</div>
+  </div>
+
+  <div class="sub-tab-content active" id="metrics">
+    <h2>Success Metrics Summary</h2>
+    <div class="section-label">Portfolio Outcomes</div>
+    <div class="table-placeholder">
+      <table>
+        <tr><th style="width:60%">Metric</th><th>Value</th></tr>
+        <tr><td>Survival Rate</td><td>87.3%</td></tr>
+        <tr><td>Paths Depleted</td><td>127</td></tr>
+        <tr><td>Median Final Portfolio (nominal)</td><td>$1,243,500</td></tr>
+        <tr><td>Median Final Portfolio (real)</td><td>$472,100</td></tr>
+        <tr><td>10th Pct Final</td><td>$82,300</td></tr>
+        <tr><td>90th Pct Final</td><td>$3,812,000</td></tr>
+        <tr><td>Median Year of Depletion (age)</td><td>Age 89</td></tr>
+        <tr><td>Median Peak Portfolio</td><td>$1,890,000</td></tr>
+      </table>
+    </div>
+
+    <div class="section-label" style="margin-top:1rem">Guardrail Trigger Frequencies</div>
+    <div class="table-placeholder">
+      <table>
+        <tr><th style="width:60%">Event</th><th>% of Paths</th></tr>
+        <tr><td>Inflation — spending cut (at least once)</td><td>45.6%</td></tr>
+        <tr><td>Portfolio Value — spending cut (at least once)</td><td>34.2%</td></tr>
+        <tr><td>Portfolio Value — spending raise (at least once)</td><td>18.7%</td></tr>
+        <tr><td>Withdrawal Rate — warning cut (at least once)</td><td>22.1%</td></tr>
+        <tr><td>Withdrawal Rate — critical cut (at least once)</td><td>8.4%</td></tr>
+        <tr><td>Withdrawal Rate — low raise (at least once)</td><td>5.1%</td></tr>
+        <tr><td>ACA MAGI — cliff breach (at least once)</td><td>--</td></tr>
+        <tr><td>No guardrail ever triggered</td><td>12.3%</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="sub-tab-content" id="portfolio">
+    <div class="radio-toggle">
+      <div class="radio-opt active">Nominal</div>
+      <div class="radio-opt">Real (Inflation-Adjusted)</div>
+    </div>
+    <div class="chart-placeholder">
+      <div class="chart-title">Portfolio Value by Age — Percentile Fan (1,000 paths)</div>
+      <div class="chart-desc">
+        5 percentile bands (10th/25th/50th/75th/90th). Shaded 10th-90th band and emphasized median line.
+        Vertical lines for SS Begins and Medicare.
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-tab-content" id="spending">
+    <div class="radio-toggle">
+      <div class="radio-opt active">Nominal</div>
+      <div class="radio-opt">Real</div>
+    </div>
+    <div class="chart-placeholder">
+      <div class="chart-title">Annual Spending by Age — Guardrail-Adjusted (1,000 paths)</div>
+      <div class="chart-desc">
+        5 percentile bands with spending floor/ceiling overlays and vertical annotations for SS start and Medicare.
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-tab-content" id="analysis">
+    <div class="chart-placeholder" style="height:300px">
+      <div class="chart-title">Guardrail Events by Age (stacked bar)</div>
+      <div class="chart-desc">
+        Stacked counts for PV-DOWN, PV-UP, WR-WARN, WR-CRIT, WR-LOW, ACA-BREACH, and INF.
+      </div>
+    </div>
+
+    <div class="analysis-split">
+      <div class="left">
+        <div class="chart-placeholder" style="height:250px">
+          <div class="chart-title">Survival Rate Donut</div>
+          <div class="chart-desc">Survived vs Depleted with centered survival percentage.</div>
+        </div>
+      </div>
+      <div class="right">
+        <div class="chart-placeholder" style="height:250px">
+          <div class="chart-title">Inflation Path Distribution by Age</div>
+          <div class="chart-desc">10th/50th/90th fan with reference lines for floor, mean, and GR4 trigger.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-tab-content" id="taxeff">
+    <div class="radio-toggle">
+      <div class="radio-opt active">Fan Chart</div>
+      <div class="radio-opt">Box Plot</div>
+    </div>
+    <div class="chart-placeholder">
+      <div class="chart-title">Withdrawal Rate by Age — Distribution Across Paths</div>
+      <div class="chart-desc">
+        Includes reference lines at 4.0%, 5.0%, and 6.5%; toggle between fan and box representations.
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-tab-content" id="rawdata">
+    <div class="section-label">Table 1 — Percentile Portfolio Paths</div>
+    <div class="table-placeholder">
+      <table>
+        <tr><th>Age</th><th>Year</th><th>10th</th><th>25th</th><th>Median</th><th>75th</th><th>90th</th></tr>
+        <tr><td>60</td><td>1</td><td>$912K</td><td>$948K</td><td>$998K</td><td>$1.05M</td><td>$1.10M</td></tr>
+        <tr><td>61</td><td>2</td><td>$845K</td><td>$910K</td><td>$1.01M</td><td>$1.11M</td><td>$1.22M</td></tr>
+        <tr><td>62</td><td>3</td><td>$780K</td><td>$878K</td><td>$1.02M</td><td>$1.18M</td><td>$1.35M</td></tr>
+        <tr><td colspan="7" style="text-align:center; color:var(--text-muted)">... 32 more rows ...</td></tr>
+      </table>
+    </div>
+    <div class="btn-download">Download CSV — Percentile Portfolio Paths</div>
+
+    <div class="section-label" style="margin-top:1.25rem">Table 5 — Full Path Data Export</div>
+    <div class="warn-box">Large export warning: 1,000 paths x 35 years = 35,000 rows (multi-MB CSV).</div>
+    <div class="btn-download">Generate and Download Full Path Data</div>
+  </div>
+
+  <div class="sub-tab-content" id="compare">
+    <div class="warn-box" style="background:#eff6ff; border-color:#93c5fd; color:#1e40af;">
+      Comparing: <strong>Base Case (Growth 60/40)</strong> vs <strong>Conservative Low Spend</strong>
+    </div>
+
+    <div class="section-label" style="margin-top:0.5rem">Side-by-Side Metrics</div>
+    <div class="table-placeholder">
+      <table>
+        <tr><th style="width:40%">Metric</th><th>Base Case</th><th>Conservative</th><th>Delta</th></tr>
+        <tr><td>Survival Rate</td><td>87.3%</td><td>94.1%</td><td style="color:var(--green)">+6.8%</td></tr>
+        <tr><td>Median Final Portfolio</td><td>$1.24M</td><td>$890K</td><td style="color:var(--red)">-$350K</td></tr>
+        <tr><td>Avg Annual Spending</td><td>$52,400</td><td>$38,200</td><td style="color:var(--red)">-$14,200</td></tr>
+        <tr><td>Median Withdrawal Rate</td><td>4.2%</td><td>3.1%</td><td style="color:var(--green)">-1.1%</td></tr>
+      </table>
+    </div>
+
+    <div class="chart-placeholder" style="margin-top:1rem">
+      <div class="chart-title">Median Portfolio Comparison — Overlaid Fan</div>
+      <div class="chart-desc">
+        Two 50th percentile lines overlaid on the same age axis with a shared Y-scale.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('#resultSubTabs .stab').forEach(stab => {
+    stab.addEventListener('click', () => {
+      document.querySelectorAll('#resultSubTabs .stab').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
+      stab.classList.add('active');
+      document.getElementById(stab.dataset.stab).classList.add('active');
+    });
+  });
+
+  document.querySelectorAll('.radio-toggle').forEach(group => {
+    group.querySelectorAll('.radio-opt').forEach(opt => {
+      opt.addEventListener('click', () => {
+        group.querySelectorAll('.radio-opt').forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+      });
+    });
+  });
+</script>
+</body>
+</html>
