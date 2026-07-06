@@ -5,7 +5,9 @@ from __future__ import annotations
 import streamlit as st
 
 from simulation.models import GuardrailModel, SimulationParams, SimulationSummary
-from simulation.monte_carlo import MonteCarloSimulator
+
+# NOTE: MonteCarloSimulator removed in Phase 2. App will be rewritten in Phase 3–5.
+# from simulation.monte_carlo import MonteCarloSimulator
 from ui.inputs import render_inputs
 from ui.outputs import render_outputs
 
