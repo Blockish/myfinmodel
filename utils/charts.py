@@ -200,9 +200,13 @@ def create_guardrail_event_chart(
     ages: Sequence[int],
     n_paths: int,
     include_none: bool = False,
+    include_aca: bool = True,
 ) -> go.Figure:
     """Create stacked event frequency bars by age from event code matrix."""
-    codes = ["PV-DOWN", "PV-UP", "WR-WARN", "WR-CRIT", "WR-LOW", "ACA-BREACH", "INF"]
+    codes = ["PV-DOWN", "PV-UP", "WR-WARN", "WR-CRIT", "WR-LOW"]
+    if include_aca:
+        codes.append("ACA-BREACH")
+    codes.append("INF")
     if include_none:
         codes.append("NONE")
 

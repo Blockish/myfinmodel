@@ -119,7 +119,7 @@ def _success_metrics_table(results: SimulationResults, *, show_extended: bool = 
         {"Category": "Guardrail Trigger Frequencies", "Metric": "% paths with WR-WARN at least once", "Value": f"{np.mean(np.any(events == 'WR-WARN', axis=1)) * 100:.1f}%"},
         {"Category": "Guardrail Trigger Frequencies", "Metric": "% paths with WR-CRIT at least once", "Value": f"{np.mean(np.any(events == 'WR-CRIT', axis=1)) * 100:.1f}%"},
         {"Category": "Guardrail Trigger Frequencies", "Metric": "% paths with WR-LOW at least once", "Value": f"{np.mean(np.any(events == 'WR-LOW', axis=1)) * 100:.1f}%"},
-        {"Category": "Guardrail Trigger Frequencies", "Metric": "% paths with ACA-BREACH at least once", "Value": f"{np.mean(np.any(events == 'ACA-BREACH', axis=1)) * 100:.1f}%"},
+        {"Category": "Guardrail Trigger Frequencies", "Metric": "% paths with ACA-BREACH at least once", "Value": f"{np.mean(np.any(events == 'ACA-BREACH', axis=1)) * 100:.1f}%" if (results.inputs.gr3.enabled and results.inputs.health.aca_guardrail_enabled) else "N/A (GR3 disabled)"},
         {"Category": "Guardrail Trigger Frequencies", "Metric": "% paths with INF at least once", "Value": f"{np.mean(np.any(events == 'INF', axis=1)) * 100:.1f}%"},
         {"Category": "Guardrail Trigger Frequencies", "Metric": "% paths never triggering any guardrail", "Value": f"{np.mean(np.all(events == 'NONE', axis=1)) * 100:.1f}%"},
         {"Category": "Withdrawal Rate Statistics", "Metric": "Median WR across surviving path-years", "Value": f"{_safe_median(wr_alive) * 100:.2f}%"},
@@ -452,11 +452,13 @@ def render_outputs(results: SimulationResults) -> None:
 
     # Tab 4: Analysis (Guardrails + Inflation)
     with tab_objects[3]:
+        aca_active = results.inputs.gr3.enabled and results.inputs.health.aca_guardrail_enabled
         ev_fig = create_guardrail_event_chart(
             events_matrix=results.events,
             ages=results.ages,
             n_paths=results.n_paths,
             include_none=False,
+            include_aca=aca_active,
         )
         st.plotly_chart(ev_fig, use_container_width=True)
 
