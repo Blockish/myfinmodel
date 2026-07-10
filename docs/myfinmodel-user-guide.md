@@ -255,14 +255,106 @@ The following are aligned to current implementation:
 - Behavioral adherence to guardrails is assumed; real-world behavior can differ.
 - Tax and ACA law changes can invalidate parameter assumptions over time.
 
-## Section 8: Missing Items and Proposed Additions
+## Section 8: Added Reference Material
 
-The document is now structurally consistent and TODOs are filled, but these additions would improve completeness:
+### 8.1 Input Field Data Dictionary
 
-1. **Input Field Data Dictionary (proposed):** One compact table listing each input, allowed range, default, and validator rule.
-2. **Event Code Glossary (proposed):** Define each event code (`PV-DOWN`, `WR-CRIT`, `ACA-BREACH`, etc.) with trigger and practical response.
-3. **Worked Example Scenario (proposed):** A full baseline scenario with concrete inputs and a short interpretation walkthrough.
-4. **Troubleshooting Guide (proposed):** Common validation errors/warnings and how to fix them quickly.
-5. **Sensitivity Playbook (proposed):** A checklist for what to vary first (spending, horizon, return assumptions, guardrails) and by how much.
-6. **Compare Tab Method Notes (proposed):** Explain delta interpretation and how differing horizons are padded in overlays.
-7. **Versioned Assumption Log (proposed):** Track major model assumption changes across releases.
+This table summarizes key inputs, UI ranges/options, defaults, and validation behavior.
+
+| Group | Field | Allowed Range or Options | Default | Validation and Notes |
+| --- | --- | --- | --- | --- |
+| Portfolio | Starting Portfolio Value | 0 to 50,000,000 | 1,000,000 | Must be > 0 (blocking). |
+| Portfolio | Taxable Account | >= 0 | 0 | Advisory warning if account totals differ from starting portfolio. |
+| Portfolio | Tax-Deferred (IRA/401k) | >= 0 | 0 | Included in same advisory sum check. |
+| Portfolio | Roth | >= 0 | 0 | Included in same advisory sum check. |
+| Portfolio | Unrealized Gain % | 0 to 100% | 30% | Used in simplified tax approximation. |
+| Portfolio | LTCG Tax Rate | 0%, 15%, 20%, 23.8% | 15% | Dropdown-driven option set. |
+| Portfolio | Ordinary Income Tax Rate | 10%, 12%, 22%, 24%, 32%, 35%, 37% | 22% | Dropdown-driven option set. |
+| Personal | Current Age | 18 to 85 | 65 | Context field; does not drive horizon directly. |
+| Personal | Retirement Start Age | 18 to 85 | 65 | Simulation ages begin here. |
+| Personal | Filing Status | Single, Married Filing Jointly | Single | Currently informational for future tax expansion. |
+| Personal | Social Security Start Age | 62 to 70 | 67 | Must be 62 to 70 when SS enabled (blocking). |
+| Personal | Planning Horizon (years) | 5 to 50 | 35 | Must be >= 1 in core validator (blocking). |
+| Spending | Spending Tiers | 1 to 5 tiers | 1 tier covering full horizon | Must cover full horizon contiguously with no gaps/overlaps (blocking). |
+| Spending | Spending Floor | >= 0 | 20,000 | Must be non-negative and less than ceiling (blocking). |
+| Spending | Spending Ceiling | >= 0 | 100,000 | Must be greater than floor (blocking). |
+| Social Security | Enable Social Security | On or Off | On | If Off, SS fields are not used in cash-flow logic. |
+| Social Security | Annual SS Benefit | 0 to 60,000 | 24,000 | Applied from SS start age with COLA when enabled. |
+| Social Security | SS COLA | 0 to 5% | 2.5% | Applied each year after claim start. |
+| Health | Medicare Start Age | 60 to 70 | 65 | Medicare premium logic applies at/after this age. |
+| Health | Annual Medicare Premium | 0 to 20,000 | 3,600 | Inflated by path-level cumulative inflation. |
+| Health | Enable ACA Guardrail | On or Off | On | Must be On for ACA MAGI guardrail behavior. |
+| Health | ACA MAGI Cliff | 20,000 to 200,000 | 62,000 | With ACA active, target must be < cliff (blocking). |
+| Health | ACA Safe Target MAGI | 0 to 200,000 | 58,000 | With ACA active, must be < cliff (blocking). |
+| Health | ACA Premium Over Cliff | 0 to 60,000 | 18,000 | Used by simplified ACA health-cost logic. |
+| Health | ACA Premium Under Cliff | 0 to 60,000 | 4,800 | Used by simplified ACA health-cost logic. |
+| Market | Portfolio Style Preset | Conservative, Moderate, Growth, Aggressive Growth, Equity Only, Custom | Growth | Non-Custom presets auto-fill return and volatility. |
+| Market | Expected Annual Return | 1 to 15% | 6.5% | Negative values are allowed in model but warned in validator. |
+| Market | Return Std Dev | 1 to 30% | 12% | Must be > 0 (blocking); outside 5-25% triggers warning. |
+| Market | Return-Inflation Correlation | -0.50 to 0.80 | 0.10 | Must satisfy abs(corr) < 1 (blocking). |
+| Market | Inflation Mean | 0 to 10% | 3.0% | Compared with floor for clipping advisory warning. |
+| Market | Inflation Std Dev | 0 to 5% | 1.5% | Must be > 0 (blocking). |
+| Market | Inflation Floor | 0 to 10% | 1.0% | If floor > mean, warning about draw clipping. |
+| Simulation | Simulation Paths | 100 to 10,000 | 1,000 | Must remain within 100-10,000 (blocking). |
+| Simulation | Lock Random Seed | On or Off | Off | If Off, app generates a fresh seed each run. |
+| Simulation | Random Seed | 0 to 999,999 | 42 | Used only when seed lock is enabled. |
+| Guardrails | GR1 Portfolio Value | Enabled, floor/ceiling/cut/raise sliders | Enabled | Floor/ceiling and adjustments are user-configurable. |
+| Guardrails | GR2 Withdrawal Rate | Enabled, low/warn/critical thresholds and cuts/raise | Enabled | Must satisfy low < warn < critical (blocking). |
+| Guardrails | GR3 ACA MAGI | Enabled toggle | Enabled | Effective only when ACA guardrail is also enabled in Health section. |
+| Guardrails | GR4 Inflation | Enabled, trigger and cut sliders | Enabled | Trigger and cut drive `INF` event behavior. |
+
+### 8.2 Event Code Glossary
+
+| Event Code | Trigger Condition | Modeled Action | Practical Interpretation |
+| --- | --- | --- | --- |
+| `PV-DOWN` | Portfolio falls below GR1 floor threshold | Spending cut by GR1 cut % | Portfolio stress response; may indicate sustainability risk. |
+| `PV-UP` | Portfolio rises above GR1 ceiling threshold | Spending increase by GR1 raise % | Surplus response; indicates potential overfunding versus plan. |
+| `WR-LOW` | Withdrawal rate below GR2 low threshold | Spending increase by GR2 low-raise % | Portfolio under-withdrawal relative to guardrail policy. |
+| `WR-WARN` | Withdrawal rate between GR2 warn and critical thresholds | Spending cut by GR2 warn-cut % | Early warning zone for withdrawal pressure. |
+| `WR-CRIT` | Withdrawal rate at/above GR2 critical threshold | Spending cut by GR2 critical-cut % | High-risk withdrawal pressure requiring larger adjustment. |
+| `ACA-BREACH` | GR3/ACA logic flags projected MAGI breach in pre-Medicare years | ACA-related health-cost consequence is applied | Subsidy-loss risk year under configured ACA assumptions. |
+| `INF` | Inflation draw exceeds GR4 trigger | Spending cut by GR4 cut % | Inflation shock response to preserve purchasing power. |
+| `NONE` | No guardrail trigger recorded for that path-year | No guardrail-labeled adjustment | Normal year or a depleted-path override year. |
+
+Notes:
+
+- Guardrails are evaluated in fixed order (GR1 -> GR2 -> GR3 -> GR4), and only the first triggered event is logged for a given path-year.
+- In depleted paths, the engine applies a ruin-state override and writes `NONE` as the event code.
+
+### 8.3 Troubleshooting Guide
+
+#### Blocking Validation Errors (must fix before run)
+
+- **Portfolio start must be > 0:** Enter a positive starting portfolio.
+- **Plan years invalid:** Use a planning horizon >= 1 year.
+- **Spending tier coverage errors:** Ensure tiers cover every age from retirement start through horizon end with no gaps or overlaps.
+- **Spending floor/ceiling errors:** Keep floor >= 0 and ceiling > floor.
+- **GR2 threshold order errors:** Set thresholds so low < warn < critical.
+- **Correlation/volatility errors:** Keep abs(corr) < 1 and both return/inflation std dev > 0.
+- **ACA target/cliff order error:** When ACA guardrail is active, set MAGI target < MAGI cliff.
+- **Paths out of range:** Keep simulation paths between 100 and 10,000.
+- **SS start age out of range:** When SS is enabled, set claim age between 62 and 70.
+
+#### Common Warnings (run is allowed)
+
+- **Account sum mismatch:** Account breakdown does not match starting portfolio. Align values if you want the tax mix to reflect reality.
+- **Large memory warning:** High path-years count may slow runtime. Reduce paths or horizon for quick iteration.
+- **Inflation floor exceeds mean:** Draws will be clipped frequently; check whether this is intentional.
+- **SS timing warning:** SS starts after plan end or immediately at retirement; verify if this matches your scenario design.
+- **Unusual volatility warning:** Return std dev outside typical 5-25% range; sanity-check assumptions.
+- **Negative expected return warning:** Allowed, but usually used only for stress testing.
+
+#### Results and Workflow Issues
+
+- **Validation messages appear below the full Inputs tab:** Blocking errors and warnings currently render after all input sections, so they may be off-screen until the user scrolls down. This is current behavior, not user error.
+- **"Inputs changed" stale-results banner:** Re-run simulation after changing any input so outputs align with current assumptions.
+- **Compare tab missing:** Save at least two scenarios that include results; compare appears only then.
+- **ACA metrics showing N/A:** Check both toggles: ACA Guardrail (Health section) and GR3 ACA Guardrail (Guardrail section).
+- **Full path export is slow/large:** Start with summary tables first, or reduce path count before exporting full path-level data.
+
+### 8.4 Remaining Proposed Additions
+
+1. **Worked Example Scenario (proposed):** A full baseline scenario with concrete inputs and a short interpretation walkthrough.
+2. **Sensitivity Playbook (proposed):** A checklist for what to vary first (spending, horizon, return assumptions, guardrails) and by how much.
+3. **Compare Tab Method Notes (proposed):** Explain delta interpretation and how differing horizons are padded in overlays.
+4. **Versioned Assumption Log (proposed):** Track major model assumption changes across releases.
