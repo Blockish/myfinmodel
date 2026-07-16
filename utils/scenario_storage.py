@@ -73,6 +73,19 @@ def save_scenario_snapshot(
     backup_dir = root / f"{slug}.bak"
     temp_dir = root / f"{slug}.tmp-{uuid.uuid4().hex}"
 
+    if target_dir.exists():
+        existing_name = _read_package_name(target_dir)
+        if existing_name is None:
+            raise ScenarioStorageError(
+                f"Existing scenario package '{target_dir.name}' is invalid. "
+                "Cannot safely overwrite; rename scenario or remove the invalid package."
+            )
+        if existing_name != name.strip():
+            raise ScenarioStorageError(
+                f"Scenario name '{name.strip()}' collides with existing saved scenario "
+                f"'{existing_name}'. Choose a different name."
+            )
+
     try:
         temp_dir.mkdir(parents=True, exist_ok=False)
 
@@ -94,7 +107,6 @@ def save_scenario_snapshot(
             "inputs_hash": inputs_sha,
             "results_hash": results_sha,
             "has_results": results is not None,
-            "inputs_content_hash": inputs.content_hash(),
             "seed": int(inputs.random_seed),
         }
         _write_json(temp_dir / "manifest.json", manifest)
@@ -203,6 +215,20 @@ def _load_single_package(pkg_dir: Path) -> dict:
         "saved_at_utc": manifest.get("saved_at_utc"),
         "package_dir": str(pkg_dir),
     }
+
+
+def _read_package_name(pkg_dir: Path) -> str | None:
+    manifest_path = pkg_dir / "manifest.json"
+    if not manifest_path.exists():
+        return None
+    try:
+        manifest = _read_json(manifest_path)
+    except Exception:
+        return None
+    name = manifest.get("name")
+    if isinstance(name, str) and name.strip():
+        return name.strip()
+    return None
 
 
 def _write_results_npz(path: Path, results: SimulationResults) -> None:

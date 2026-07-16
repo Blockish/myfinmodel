@@ -3,9 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from simulation.models import SimulationInputs, SimulationResults, SpendingTier
-from utils.scenario_storage import load_scenario_snapshots, save_scenario_snapshot
+from utils.scenario_storage import (
+    ScenarioStorageError,
+    load_scenario_snapshots,
+    save_scenario_snapshot,
+)
 
 
 def _build_inputs(*, seed: int = 123) -> SimulationInputs:
@@ -145,3 +150,22 @@ def test_quarantine_corrupt_package_when_no_valid_backup(tmp_path: Path) -> None
 
     quarantined = [p for p in root.iterdir() if p.is_dir() and ".corrupt-" in p.name]
     assert quarantined
+
+
+def test_slug_collision_raises_clear_error(tmp_path: Path) -> None:
+    root = tmp_path / "scenarios"
+
+    inputs_a = _build_inputs(seed=1)
+    results_a = _build_results(inputs_a)
+    save_scenario_snapshot(name="Retire Plan", inputs=inputs_a, results=results_a, base_dir=root)
+
+    inputs_b = _build_inputs(seed=2)
+    results_b = _build_results(inputs_b, offset=5_000.0)
+
+    with pytest.raises(ScenarioStorageError, match="collides with existing saved scenario"):
+        save_scenario_snapshot(
+            name="Retire-Plan",
+            inputs=inputs_b,
+            results=results_b,
+            base_dir=root,
+        )

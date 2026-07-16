@@ -25,8 +25,21 @@ def render_scenario_controls() -> None:
     """Render scenario save/load controls in the sidebar."""
     if not st.session_state.get("_scenario_storage_loaded", False):
         report = load_scenario_snapshots()
-        st.session_state["scenarios"] = report.scenarios
-        st.session_state["_scenario_storage_warnings"] = report.warnings
+        loaded = sorted(
+            report.scenarios,
+            key=lambda s: str(s.get("saved_at_utc") or ""),
+            reverse=True,
+        )
+        warnings = list(report.warnings)
+        if len(loaded) > 5:
+            ignored = len(loaded) - 5
+            loaded = loaded[:5]
+            warnings.append(
+                f"Loaded most recent 5 scenarios; ignored {ignored} older persistent scenario(s)."
+            )
+
+        st.session_state["scenarios"] = loaded
+        st.session_state["_scenario_storage_warnings"] = warnings
         st.session_state["_scenario_storage_loaded"] = True
         st.session_state["_scenario_storage_recovered_count"] = report.recovered_count
         st.session_state["_scenario_storage_skipped_count"] = report.skipped_count
