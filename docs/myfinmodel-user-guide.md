@@ -187,6 +187,8 @@ Special banners:
 - **Raw Data:** Downloadable tables and optional full path export.
 - **Compare:** Appears when at least two saved scenarios include results.
 
+Saved scenarios are persisted locally and auto-loaded on app startup. The save location is `%LOCALAPPDATA%\\MyFinModel\\scenarios` (typically `C:\\Users\\<your-user>\\AppData\\Local\\MyFinModel\\scenarios` on Windows). If a saved scenario includes results, the Compare tab uses that exact saved snapshot without recomputing.
+
 ### 4.3 Raw Data Tables
 
 - **Table 1 - Percentile Portfolio Paths** (Age/Year, 10/25/50/75/90th percentiles)
@@ -349,6 +351,8 @@ Notes:
 - **Validation messages appear below the full Inputs tab:** Blocking errors and warnings currently render after all input sections, so they may be off-screen until the user scrolls down. This is current behavior, not user error.
 - **"Inputs changed" stale-results banner:** Re-run simulation after changing any input so outputs align with current assumptions.
 - **Compare tab missing:** Save at least two scenarios that include results; compare appears only then.
+- **Saved scenario load warnings:** If a saved package is corrupted, the app skips it (or restores from a backup when available) and shows a warning in the Scenario Management panel.
+- **Where saved scenarios are stored:** `%LOCALAPPDATA%\\MyFinModel\\scenarios` (typically `C:\\Users\\<your-user>\\AppData\\Local\\MyFinModel\\scenarios` on Windows).
 - **ACA metrics showing N/A:** Check both toggles: ACA Guardrail (Health section) and GR3 ACA Guardrail (Guardrail section).
 - **Full path export is slow/large:** Start with summary tables first, or reduce path count before exporting full path-level data.
 
