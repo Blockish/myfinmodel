@@ -14,10 +14,23 @@ from copy import deepcopy
 import streamlit as st
 
 from simulation.models import SimulationInputs
+from utils.scenario_storage import (
+    default_scenarios_dir,
+    load_scenario_snapshots,
+    save_scenario_snapshot,
+)
 
 
 def render_scenario_controls() -> None:
     """Render scenario save/load controls in the sidebar."""
+    if not st.session_state.get("_scenario_storage_loaded", False):
+        report = load_scenario_snapshots()
+        st.session_state["scenarios"] = report.scenarios
+        st.session_state["_scenario_storage_warnings"] = report.warnings
+        st.session_state["_scenario_storage_loaded"] = True
+        st.session_state["_scenario_storage_recovered_count"] = report.recovered_count
+        st.session_state["_scenario_storage_skipped_count"] = report.skipped_count
+
     if "scenarios" not in st.session_state:
         st.session_state["scenarios"] = []
 
@@ -58,7 +71,18 @@ def render_scenario_controls() -> None:
                 "results": current_results,  # no deepcopy; results are replaced, not mutated
             })
             st.session_state["scenarios"] = scenarios
-            st.success(f"Saved: {name.strip()}")
+            try:
+                save_scenario_snapshot(
+                    name=name.strip(),
+                    inputs=inputs,
+                    results=current_results,
+                )
+                st.success(f"Saved: {name.strip()} (persistent)")
+            except Exception as exc:
+                st.warning(
+                    "Saved for this session, but persistent write failed: "
+                    f"{exc}"
+                )
 
     # ── Load ──────────────────────────────────────────────────────────────────
     if scenarios:
@@ -89,6 +113,15 @@ def render_scenario_controls() -> None:
         st.caption(f"{len(scenarios)} of 5 slots used")
     else:
         st.caption("No saved scenarios.")
+
+    warning_lines = st.session_state.get("_scenario_storage_warnings", [])
+    if warning_lines:
+        st.warning("Some saved scenario packages were skipped or recovered:")
+        for line in warning_lines:
+            st.caption(f"- {line}")
+
+    storage_path = default_scenarios_dir()
+    st.caption(f"Persistent store: {storage_path}")
 
 
 def _restore_inputs(inputs: SimulationInputs) -> None:
