@@ -51,6 +51,58 @@ _ORD_OPTIONS = [0.10, 0.12, 0.22, 0.24, 0.32, 0.35, 0.37]
 _ORD_LABELS = ["10%", "12%", "22%", "24%", "32%", "35%", "37%"]
 
 
+def _format_money(value: float) -> str:
+    return f"{float(value):,.0f}"
+
+
+def _parse_money(raw: str) -> float | None:
+    cleaned = raw.strip().replace("$", "").replace(",", "")
+    if not cleaned:
+        return None
+    try:
+        return float(cleaned)
+    except ValueError:
+        return None
+
+
+def _money_input(
+    label: str,
+    *,
+    key: str,
+    default: float,
+    min_value: float = 0.0,
+    max_value: float | None = None,
+    help: str | None = None,
+) -> float:
+    """Render a dollar input with thousands separators normalized on rerun."""
+    s = st.session_state
+    raw_key = f"{key}_text"
+
+    if key not in s:
+        s[key] = float(default)
+
+    if raw_key not in s:
+        s[raw_key] = _format_money(float(s[key]))
+    else:
+        parsed_existing = _parse_money(str(s[raw_key]))
+        if parsed_existing is not None:
+            if max_value is not None:
+                parsed_existing = min(parsed_existing, max_value)
+            parsed_existing = max(parsed_existing, min_value)
+            s[key] = float(parsed_existing)
+            s[raw_key] = _format_money(parsed_existing)
+
+    raw = st.text_input(label, key=raw_key, help=help)
+    parsed = _parse_money(raw)
+    if parsed is not None:
+        if max_value is not None:
+            parsed = min(parsed, max_value)
+        parsed = max(parsed, min_value)
+        s[key] = float(parsed)
+
+    return float(s[key])
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # Public API
 # ══════════════════════════════════════════════════════════════════════════════
@@ -98,45 +150,37 @@ def render_inputs() -> SimulationInputs | None:
 
 def _render_portfolio_section() -> None:
     with st.expander("💼 Portfolio", expanded=True):
-        st.number_input(
+        _money_input(
             "Starting Portfolio Value ($)",
+            key="port_start",
+            default=st.session_state.get("port_start", 1_000_000.0),
             min_value=0.0,
             max_value=50_000_000.0,
-            value=st.session_state.get("port_start", 1_000_000.0),
-            step=10_000.0,
-            format="%.0f",
-            key="port_start",
             help="Total investable assets at retirement start.",
         )
 
         st.markdown("**Account Breakdown**")
         c1, c2, c3 = st.columns(3)
         with c1:
-            st.number_input(
+            _money_input(
                 "Taxable Account ($)",
-                min_value=0.0,
-                value=st.session_state.get("taxable_value", 0.0),
-                step=10_000.0,
-                format="%.0f",
                 key="taxable_value",
+                default=st.session_state.get("taxable_value", 0.0),
+                min_value=0.0,
             )
         with c2:
-            st.number_input(
+            _money_input(
                 "Tax-Deferred — IRA/401k ($)",
-                min_value=0.0,
-                value=st.session_state.get("tax_deferred_value", 0.0),
-                step=10_000.0,
-                format="%.0f",
                 key="tax_deferred_value",
+                default=st.session_state.get("tax_deferred_value", 0.0),
+                min_value=0.0,
             )
         with c3:
-            st.number_input(
+            _money_input(
                 "Roth ($)",
-                min_value=0.0,
-                value=st.session_state.get("roth_value", 0.0),
-                step=10_000.0,
-                format="%.0f",
                 key="roth_value",
+                default=st.session_state.get("roth_value", 0.0),
+                min_value=0.0,
             )
 
         # Account sum advisory check is handled by validate_inputs() (W1)
@@ -263,14 +307,12 @@ def _render_spending_section() -> None:
                     key=f"tier_{i}_end",
                 )
             with c3:
-                tier["annual_spend"] = st.number_input(
+                tier["annual_spend"] = _money_input(
                     "Annual Spending ($)",
+                    key=f"tier_{i}_spend",
+                    default=float(tier["annual_spend"]),
                     min_value=0.0,
                     max_value=2_000_000.0,
-                    value=tier["annual_spend"],
-                    step=1_000.0,
-                    format="%.0f",
-                    key=f"tier_{i}_spend",
                 )
             with c4:
                 st.markdown("<br>", unsafe_allow_html=True)
@@ -280,6 +322,7 @@ def _render_spending_section() -> None:
                         for j in range(len(tiers)):
                             for suffix in ("start", "end", "spend"):
                                 st.session_state.pop(f"tier_{j}_{suffix}", None)
+                                st.session_state.pop(f"tier_{j}_{suffix}_text", None)
                         tiers.pop(i)
                         st.rerun()
 
@@ -298,24 +341,20 @@ def _render_spending_section() -> None:
         st.markdown("**Spending Floor & Ceiling** *(real dollars)*")
         c1, c2 = st.columns(2)
         with c1:
-            st.number_input(
+            _money_input(
                 "Spending Floor — minimum after guardrails ($)",
+                key="spend_floor",
+                default=st.session_state.get("spend_floor", 20_000.0),
                 min_value=0.0,
                 max_value=2_000_000.0,
-                value=st.session_state.get("spend_floor", 20_000.0),
-                step=1_000.0,
-                format="%.0f",
-                key="spend_floor",
             )
         with c2:
-            st.number_input(
+            _money_input(
                 "Spending Ceiling — maximum after guardrails ($)",
+                key="spend_ceiling",
+                default=st.session_state.get("spend_ceiling", 100_000.0),
                 min_value=0.0,
                 max_value=2_000_000.0,
-                value=st.session_state.get("spend_ceiling", 100_000.0),
-                step=1_000.0,
-                format="%.0f",
-                key="spend_ceiling",
             )
 
 
@@ -330,14 +369,12 @@ def _render_social_security_section() -> None:
         if ss_enabled:
             c1, c2 = st.columns(2)
             with c1:
-                st.number_input(
+                _money_input(
                     "Annual SS Benefit at Claiming Age ($)",
+                    key="ss_annual",
+                    default=st.session_state.get("ss_annual", 24_000.0),
                     min_value=0.0,
                     max_value=60_000.0,
-                    value=st.session_state.get("ss_annual", 24_000.0),
-                    step=1_000.0,
-                    format="%.0f",
-                    key="ss_annual",
                     help="Gross SS benefit in today's dollars.",
                 )
             with c2:
@@ -366,14 +403,12 @@ def _render_health_insurance_section() -> None:
                 key="medicare_age",
             )
         with c2:
-            st.number_input(
+            _money_input(
                 "Annual Medicare Premium ($)",
+                key="medicare_premium",
+                default=st.session_state.get("medicare_premium", 3_600.0),
                 min_value=0.0,
                 max_value=20_000.0,
-                value=st.session_state.get("medicare_premium", 3_600.0),
-                step=100.0,
-                format="%.0f",
-                key="medicare_premium",
                 help="Combined Part B + Part D annual premium (today's dollars).",
             )
 
@@ -386,44 +421,36 @@ def _render_health_insurance_section() -> None:
         if aca_enabled:
             c1, c2 = st.columns(2)
             with c1:
-                st.number_input(
+                _money_input(
                     "ACA MAGI Cliff ($)",
+                    key="aca_magi_cliff",
+                    default=st.session_state.get("aca_magi_cliff", 62_000.0),
                     min_value=20_000.0,
                     max_value=200_000.0,
-                    value=st.session_state.get("aca_magi_cliff", 62_000.0),
-                    step=1_000.0,
-                    format="%.0f",
-                    key="aca_magi_cliff",
                     help="Income threshold above which ACA subsidies are lost (400% FPL).",
                 )
-                st.number_input(
+                _money_input(
                     "Annual Premium if Over Cliff ($)",
+                    key="aca_premium_over",
+                    default=st.session_state.get("aca_premium_over", 18_000.0),
                     min_value=0.0,
                     max_value=60_000.0,
-                    value=st.session_state.get("aca_premium_over", 18_000.0),
-                    step=500.0,
-                    format="%.0f",
-                    key="aca_premium_over",
                 )
             with c2:
-                st.number_input(
+                _money_input(
                     "ACA Safe Target MAGI ($)",
+                    key="aca_magi_target",
+                    default=st.session_state.get("aca_magi_target", 58_000.0),
                     min_value=0.0,
                     max_value=200_000.0,
-                    value=st.session_state.get("aca_magi_target", 58_000.0),
-                    step=1_000.0,
-                    format="%.0f",
-                    key="aca_magi_target",
                     help="Target MAGI for full subsidy preservation.",
                 )
-                st.number_input(
+                _money_input(
                     "Annual Premium if Under Cliff ($)",
+                    key="aca_premium_under",
+                    default=st.session_state.get("aca_premium_under", 4_800.0),
                     min_value=0.0,
                     max_value=60_000.0,
-                    value=st.session_state.get("aca_premium_under", 4_800.0),
-                    step=500.0,
-                    format="%.0f",
-                    key="aca_premium_under",
                 )
 
 

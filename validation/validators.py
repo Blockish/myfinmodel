@@ -65,11 +65,11 @@ def validate_inputs(inputs: SimulationInputs) -> ValidationResult:
 
     # B1: Portfolio must be positive
     if inputs.port_start <= 0:
-        errors.append(f"Portfolio start ({inputs.port_start}) must be > 0.")
+        errors.append(f"Portfolio start ({inputs.port_start:,.0f}) must be > 0.")
 
     # B2: Plan horizon must be valid
     if inputs.plan_years < 1:
-        errors.append(f"Plan horizon (plan_years={inputs.plan_years}) must be >= 1.")
+        errors.append(f"Plan horizon (plan_years={inputs.plan_years:,}) must be >= 1.")
 
     # B3: Spending tiers must cover horizon contiguously
     if inputs.plan_years >= 1:
@@ -77,12 +77,12 @@ def validate_inputs(inputs: SimulationInputs) -> ValidationResult:
 
     # B4: Spending floor must be >= 0
     if inputs.spend_floor < 0:
-        errors.append(f"Spending floor ({inputs.spend_floor}) cannot be negative.")
+        errors.append(f"Spending floor ({inputs.spend_floor:,.0f}) cannot be negative.")
 
     # B5: Spending ceiling must be > floor
     if inputs.spend_ceiling <= inputs.spend_floor:
         errors.append(
-            f"Spending floor ({inputs.spend_floor}) must be less than ceiling ({inputs.spend_ceiling})."
+            f"Spending floor ({inputs.spend_floor:,.0f}) must be less than ceiling ({inputs.spend_ceiling:,.0f})."
         )
 
     # B6: GR2 thresholds must be ordered: low_rate < warn_rate < crit_rate
@@ -94,24 +94,24 @@ def validate_inputs(inputs: SimulationInputs) -> ValidationResult:
             f"Return–inflation correlation ({inputs.ret_inf_corr}) must satisfy |corr| < 1."
         )
     if inputs.ret_std <= 0:
-        errors.append(f"Return standard deviation ({inputs.ret_std}) must be > 0.")
+        errors.append(f"Return standard deviation ({inputs.ret_std:.4f}) must be > 0.")
     if inputs.inf_std <= 0:
-        errors.append(f"Inflation standard deviation ({inputs.inf_std}) must be > 0.")
+        errors.append(f"Inflation standard deviation ({inputs.inf_std:.4f}) must be > 0.")
 
     # B8: ACA MAGI thresholds must be ordered: target < cliff (only when ACA guardrail active)
     aca_active = inputs.gr3.enabled and inputs.health.aca_guardrail_enabled
     if aca_active and inputs.health.aca_magi_target >= inputs.health.aca_magi_cliff:
         errors.append(
-            f"ACA MAGI target ({inputs.health.aca_magi_target}) must be < cliff ({inputs.health.aca_magi_cliff})."
+            f"ACA MAGI target ({inputs.health.aca_magi_target:,.0f}) must be < cliff ({inputs.health.aca_magi_cliff:,.0f})."
         )
 
     # B9: n_paths must be in valid range
     if not 100 <= inputs.n_paths <= 10_000:
-        errors.append(f"n_paths ({inputs.n_paths}) must be between 100 and 10,000.")
+        errors.append(f"n_paths ({inputs.n_paths:,}) must be between 100 and 10,000.")
 
     # B10: ss_start_age must be in [62, 70]
     if inputs.ss_enabled and not 62 <= inputs.ss_start_age <= 70:
-        errors.append(f"SS start age ({inputs.ss_start_age}) must be between 62 and 70.")
+        errors.append(f"SS start age ({inputs.ss_start_age:,}) must be between 62 and 70.")
 
     # ─────────────────────────────────────────────────────────────────────────
     # WARN Rules (advisory; execution may proceed)
