@@ -279,6 +279,15 @@ def _download_df(df: pd.DataFrame, *, label: str, file_name: str) -> None:
     )
 
 
+def _display_df_rounded(df: pd.DataFrame) -> pd.DataFrame:
+    """Return a display copy rounded to 2 decimals for numeric columns."""
+    display_df = df.copy()
+    numeric_cols = display_df.select_dtypes(include=[np.number]).columns
+    if len(numeric_cols) > 0:
+        display_df[numeric_cols] = display_df[numeric_cols].astype(float).round(2)
+    return display_df
+
+
 def _compare_candidates() -> dict[str, SimulationResults]:
     """Return saved scenarios with attached results only.
 
@@ -538,7 +547,7 @@ def render_outputs(results: SimulationResults) -> None:
     with tab_objects[5]:
         df1 = _portfolio_percentiles_df(results)
         st.markdown("**Table 1 - Percentile Portfolio Paths**")
-        st.dataframe(df1, use_container_width=True)
+        st.dataframe(_display_df_rounded(df1), use_container_width=True)
         _download_df(
             df1,
             label="Download CSV - Table 1 Portfolio Paths",
@@ -547,7 +556,7 @@ def render_outputs(results: SimulationResults) -> None:
 
         st.markdown("**Table 2 - Percentile Spending Paths**")
         df2 = _spending_percentiles_df(results)
-        st.dataframe(df2, use_container_width=True)
+        st.dataframe(_display_df_rounded(df2), use_container_width=True)
         _download_df(
             df2,
             label="Download CSV - Table 2 Spending Paths",
@@ -556,7 +565,7 @@ def render_outputs(results: SimulationResults) -> None:
 
         st.markdown("**Table 3 - Guardrail Event Frequency**")
         df3 = _event_frequency_df(results)
-        st.dataframe(df3, use_container_width=True)
+        st.dataframe(_display_df_rounded(df3), use_container_width=True)
         _download_df(
             df3,
             label="Download CSV - Table 3 Guardrail Events",
@@ -565,7 +574,7 @@ def render_outputs(results: SimulationResults) -> None:
 
         st.markdown("**Table 4 - Inflation Statistics**")
         df4 = _inflation_stats_df(results)
-        st.dataframe(df4, use_container_width=True)
+        st.dataframe(_display_df_rounded(df4), use_container_width=True)
         _download_df(
             df4,
             label="Download CSV - Table 4 Inflation Statistics",
@@ -582,7 +591,7 @@ def render_outputs(results: SimulationResults) -> None:
 
         if st.button("Generate Full Path Export", key="outputs_gen_full_export"):
             full_df = _full_path_export_df(results)
-            st.dataframe(full_df.head(500), use_container_width=True)
+            st.dataframe(_display_df_rounded(full_df.head(500)), use_container_width=True)
             st.caption("Showing first 500 rows in-app. The CSV download includes all rows.")
             _download_df(
                 full_df,
