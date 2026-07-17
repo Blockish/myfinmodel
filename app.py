@@ -29,6 +29,34 @@ st.set_page_config(
 )
 
 
+def _inject_ui_polish_css() -> None:
+    """Apply global UI typography polish for tabs, inputs, and data tables."""
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stTabs"] button[data-baseweb="tab"] p {
+            font-size: 1.2rem !important;
+            font-weight: 700 !important;
+        }
+        div[data-testid="stTextInput"] input,
+        div[data-testid="stNumberInput"] input,
+        div[data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+        div[data-testid="stMultiSelect"] div[data-baseweb="select"] > div {
+            font-size: 1rem !important;
+        }
+        div[data-testid="stDataFrame"] [role="columnheader"],
+        div[data-testid="stDataFrame"] [role="gridcell"] {
+            font-size: 0.95rem !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+_inject_ui_polish_css()
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Sidebar
 # ──────────────────────────────────────────────────────────────────────────────

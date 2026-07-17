@@ -31,6 +31,11 @@ EVENT_COLORS: dict[str, str] = {
     "NONE": "#9ca3af",
 }
 
+CHART_TITLE_FONT_SIZE = 20
+AXIS_TITLE_FONT_SIZE = 16
+AXIS_TICK_FONT_SIZE = 14
+LEGEND_FONT_SIZE = 13
+
 
 def _percentiles_by_year(matrix: np.ndarray, percentiles: Sequence[int]) -> dict[int, np.ndarray]:
     """Return percentile paths over years from a (n_paths, years) matrix."""
@@ -65,13 +70,22 @@ def _add_age_markers(
 
 def _base_layout(fig: go.Figure, *, title: str, yaxis_title: str) -> go.Figure:
     fig.update_layout(
-        title=title,
+        title=dict(text=title, font=dict(size=CHART_TITLE_FONT_SIZE)),
         xaxis_title="Age",
         yaxis_title=yaxis_title,
         hovermode="x unified",
         template="plotly_white",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="left",
+            x=0,
+            font=dict(size=LEGEND_FONT_SIZE),
+        ),
         margin=dict(l=36, r=24, t=62, b=40),
+        xaxis=dict(title_font=dict(size=AXIS_TITLE_FONT_SIZE), tickfont=dict(size=AXIS_TICK_FONT_SIZE)),
+        yaxis=dict(title_font=dict(size=AXIS_TITLE_FONT_SIZE), tickfont=dict(size=AXIS_TICK_FONT_SIZE)),
     )
     return fig
 
@@ -226,12 +240,24 @@ def create_guardrail_event_chart(
 
     fig.update_layout(
         barmode="stack",
-        title=f"Guardrail Events by Age (count out of {n_paths:,} paths)",
+        title=dict(text=f"Guardrail Events by Age (count out of {n_paths:,} paths)", font=dict(size=CHART_TITLE_FONT_SIZE)),
         xaxis_title="Age",
         yaxis_title="Count of paths",
-        yaxis=dict(range=[0, n_paths]),
+        xaxis=dict(title_font=dict(size=AXIS_TITLE_FONT_SIZE), tickfont=dict(size=AXIS_TICK_FONT_SIZE)),
+        yaxis=dict(
+            range=[0, n_paths],
+            title_font=dict(size=AXIS_TITLE_FONT_SIZE),
+            tickfont=dict(size=AXIS_TICK_FONT_SIZE),
+        ),
         template="plotly_white",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="left",
+            x=0,
+            font=dict(size=LEGEND_FONT_SIZE),
+        ),
         margin=dict(l=36, r=24, t=62, b=40),
     )
     return fig
@@ -259,7 +285,7 @@ def create_survival_donut(
         )
     )
     fig.update_layout(
-        title=f"Portfolio Survival at Year {plan_years} (Age {final_age})",
+        title=dict(text=f"Portfolio Survival at Year {plan_years} (Age {final_age})", font=dict(size=CHART_TITLE_FONT_SIZE)),
         annotations=[
             dict(text=f"{survival_pct:.1f}%", x=0.5, y=0.5, showarrow=False, font=dict(size=24, color="#111827")),
             dict(text=f"n={total_paths:,}", x=0.5, y=0.41, showarrow=False, font=dict(size=11, color="#6b7280")),
@@ -325,14 +351,27 @@ def create_withdrawal_rate_chart(
         )
 
     fig.update_layout(
-        title="Withdrawal Rate by Age - Distribution Across Paths",
+        title=dict(text="Withdrawal Rate by Age - Distribution Across Paths", font=dict(size=CHART_TITLE_FONT_SIZE)),
         xaxis_title="Age",
         yaxis_title="Withdrawal Rate",
         yaxis_tickformat=".1%",
         template="plotly_white",
         hovermode="x unified" if mode != "box" else "closest",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="left",
+            x=0,
+            font=dict(size=LEGEND_FONT_SIZE),
+        ),
         margin=dict(l=36, r=24, t=62, b=40),
+        xaxis=dict(title_font=dict(size=AXIS_TITLE_FONT_SIZE), tickfont=dict(size=AXIS_TICK_FONT_SIZE)),
+        yaxis=dict(
+            tickformat=".1%",
+            title_font=dict(size=AXIS_TITLE_FONT_SIZE),
+            tickfont=dict(size=AXIS_TICK_FONT_SIZE),
+        ),
     )
     return fig
 
@@ -371,14 +410,27 @@ def create_inflation_fan_chart(
     fig.add_hline(y=gr4_inf_trigger, line_dash="dash", line_color="#b45309", annotation_text="GR4 Trigger", annotation_position="top right")
 
     fig.update_layout(
-        title="Simulated Annual Inflation Rates - Distribution by Age",
+        title=dict(text="Simulated Annual Inflation Rates - Distribution by Age", font=dict(size=CHART_TITLE_FONT_SIZE)),
         xaxis_title="Age",
         yaxis_title="Inflation Rate",
         yaxis_tickformat=".1%",
         template="plotly_white",
         hovermode="x unified",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="left",
+            x=0,
+            font=dict(size=LEGEND_FONT_SIZE),
+        ),
         margin=dict(l=36, r=24, t=62, b=40),
+        xaxis=dict(title_font=dict(size=AXIS_TITLE_FONT_SIZE), tickfont=dict(size=AXIS_TICK_FONT_SIZE)),
+        yaxis=dict(
+            tickformat=".1%",
+            title_font=dict(size=AXIS_TITLE_FONT_SIZE),
+            tickfont=dict(size=AXIS_TICK_FONT_SIZE),
+        ),
     )
     return fig
 
@@ -405,13 +457,26 @@ def create_comparison_overlay(
         )
 
     fig.update_layout(
-        title=title,
+        title=dict(text=title, font=dict(size=CHART_TITLE_FONT_SIZE)),
         xaxis_title="Age",
         yaxis_title="Portfolio Value ($)",
         yaxis_tickformat="$,.0f",
         template="plotly_white",
         hovermode="x unified",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="left",
+            x=0,
+            font=dict(size=LEGEND_FONT_SIZE),
+        ),
         margin=dict(l=36, r=24, t=62, b=40),
+        xaxis=dict(title_font=dict(size=AXIS_TITLE_FONT_SIZE), tickfont=dict(size=AXIS_TICK_FONT_SIZE)),
+        yaxis=dict(
+            tickformat="$,.0f",
+            title_font=dict(size=AXIS_TITLE_FONT_SIZE),
+            tickfont=dict(size=AXIS_TICK_FONT_SIZE),
+        ),
     )
     return fig

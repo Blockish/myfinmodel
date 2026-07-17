@@ -39,6 +39,8 @@ def test_create_portfolio_fan_chart_returns_figure():
     # 2 band traces + 5 percentile traces
     assert len(fig.data) == 7
     assert fig.layout.xaxis.title.text == "Age"
+    assert fig.layout.xaxis.tickfont.size >= 14
+    assert fig.layout.yaxis.tickfont.size >= 14
 
 
 def test_create_spending_fan_chart_returns_figure():
@@ -101,6 +103,8 @@ def test_create_withdrawal_rate_chart_fan_and_box_modes():
     assert isinstance(box, go.Figure)
     assert len(fan.data) >= 5
     assert len(box.data) == len(ages)
+    assert fan.layout.xaxis.tickfont.size >= 14
+    assert fan.layout.yaxis.tickfont.size >= 14
 
 
 def test_create_inflation_fan_chart_returns_figure():
