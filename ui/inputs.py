@@ -65,6 +65,33 @@ def _parse_money(raw: str) -> float | None:
         return None
 
 
+def _clamp_money(value: float, min_value: float, max_value: float | None) -> float:
+    if max_value is not None:
+        value = min(value, max_value)
+    return max(value, min_value)
+
+
+def _sync_money_input(
+    *,
+    value_key: str,
+    raw_key: str,
+    min_value: float,
+    max_value: float | None,
+) -> None:
+    s = st.session_state
+    parsed = _parse_money(str(s.get(raw_key, "")))
+
+    if parsed is None:
+        formatted = _format_money(float(s[value_key]))
+    else:
+        clamped = _clamp_money(parsed, min_value, max_value)
+        s[value_key] = float(clamped)
+        formatted = _format_money(clamped)
+
+    # Apply text normalization on the next rerun before the widget is created.
+    s[f"{raw_key}_pending"] = formatted
+
+
 def _money_input(
     label: str,
     *,
@@ -77,35 +104,37 @@ def _money_input(
     """Render a dollar input with thousands separators normalized on rerun."""
     s = st.session_state
     raw_key = f"{key}_text"
+    pending_key = f"{raw_key}_pending"
 
     if key not in s:
         s[key] = float(default)
 
-    if raw_key not in s:
+    if pending_key in s:
+        s[raw_key] = s.pop(pending_key)
+    elif raw_key not in s:
         s[raw_key] = _format_money(float(s[key]))
     else:
         parsed_existing = _parse_money(str(s[raw_key]))
         if parsed_existing is not None:
-            if max_value is not None:
-                parsed_existing = min(parsed_existing, max_value)
-            parsed_existing = max(parsed_existing, min_value)
+            parsed_existing = _clamp_money(parsed_existing, min_value, max_value)
             s[key] = float(parsed_existing)
             s[raw_key] = _format_money(parsed_existing)
         else:
             # Keep displayed text consistent with the last valid numeric state.
             s[raw_key] = _format_money(float(s[key]))
 
-    raw = st.text_input(label, key=raw_key, help=help)
-    parsed = _parse_money(raw)
-    if parsed is not None:
-        if max_value is not None:
-            parsed = min(parsed, max_value)
-        parsed = max(parsed, min_value)
-        s[key] = float(parsed)
-        s[raw_key] = _format_money(parsed)
-    else:
-        # If user enters invalid text, snap back to last valid formatted value.
-        s[raw_key] = _format_money(float(s[key]))
+    st.text_input(
+        label,
+        key=raw_key,
+        help=help,
+        on_change=_sync_money_input,
+        kwargs={
+            "value_key": key,
+            "raw_key": raw_key,
+            "min_value": min_value,
+            "max_value": max_value,
+        },
+    )
 
     return float(s[key])
 
