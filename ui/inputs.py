@@ -91,6 +91,9 @@ def _money_input(
             parsed_existing = max(parsed_existing, min_value)
             s[key] = float(parsed_existing)
             s[raw_key] = _format_money(parsed_existing)
+        else:
+            # Keep displayed text consistent with the last valid numeric state.
+            s[raw_key] = _format_money(float(s[key]))
 
     raw = st.text_input(label, key=raw_key, help=help)
     parsed = _parse_money(raw)
@@ -99,6 +102,10 @@ def _money_input(
             parsed = min(parsed, max_value)
         parsed = max(parsed, min_value)
         s[key] = float(parsed)
+        s[raw_key] = _format_money(parsed)
+    else:
+        # If user enters invalid text, snap back to last valid formatted value.
+        s[raw_key] = _format_money(float(s[key]))
 
     return float(s[key])
 
