@@ -91,14 +91,18 @@ def _wait_for_port(port: int, timeout_seconds: int) -> bool:
     return False
 
 
-def _wait_and_open_browser(port: int, logger: logging.Logger) -> None:
+def _wait_and_open_browser(port: int, logger: logging.Logger, notify_user=None) -> None:
     if not _wait_for_port(port, STARTUP_TIMEOUT_SECONDS):
         logger.error("Streamlit did not start within timeout (%ds).", STARTUP_TIMEOUT_SECONDS)
+        if notify_user:
+            notify_user(f"{APP_NAME} failed to start. See launcher log for details.")
         return
     url = f"http://127.0.0.1:{port}"
     logger.info("Opening browser at %s", url)
-    webbrowser.open(url)
-
+    try:
+        webbrowser.open(url)
+    except Exception as exc:
+        logger.exception("Failed to open browser: %s", exc)
 
 def _run_streamlit(app_path: str, port: int) -> None:
     import streamlit.web.bootstrap as bootstrap
