@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import logging
-import multiprocessing
 import os
 import socket
 import sys
+import threading
 import time
 import webbrowser
 from pathlib import Path
@@ -91,25 +91,29 @@ def _wait_for_port(port: int, timeout_seconds: int) -> bool:
     return False
 
 
-def _run_streamlit(app_path: str, port: int) -> None:
-    from streamlit.web import cli as stcli
+def _wait_and_open_browser(port: int, logger: logging.Logger) -> None:
+    if not _wait_for_port(port, STARTUP_TIMEOUT_SECONDS):
+        logger.error("Streamlit did not start within timeout (%ds).", STARTUP_TIMEOUT_SECONDS)
+        return
+    url = f"http://127.0.0.1:{port}"
+    logger.info("Opening browser at %s", url)
+    webbrowser.open(url)
 
-    sys.argv = [
-        "streamlit",
-        "run",
-        app_path,
-        "--server.headless=true",
-        "--browser.gatherUsageStats=false",
-        "--server.address",
-        "127.0.0.1",
-        "--server.port",
-        str(port),
-    ]
-    stcli.main()
+
+def _run_streamlit(app_path: str, port: int) -> None:
+    import streamlit.web.bootstrap as bootstrap
+    from streamlit import config as _config
+
+    _config.set_option("server.headless", True)
+    _config.set_option("browser.gatherUsageStats", False)
+    _config.set_option("server.port", port)
+    _config.set_option("server.address", "127.0.0.1")
+    _config.set_option("global.developmentMode", False)
+
+    bootstrap.run(app_path, False, [], {})
 
 
 def main() -> int:
-    multiprocessing.freeze_support()
     logger = _configure_logger()
 
     def _notify_user(message: str) -> None:
@@ -130,29 +134,19 @@ def main() -> int:
         _notify_user(f"{APP_NAME} failed to start: {exc}")
         return 1
 
-    streamlit_process = multiprocessing.Process(
-        target=_run_streamlit,
-        args=(str(app_path), port),
-        daemon=False,
+    # Start browser opener in a background thread
+    watcher_thread = threading.Thread(
+        target=_wait_and_open_browser,
+        args=(port, logger),
+        daemon=True,
     )
+    watcher_thread.start()
 
     try:
-        streamlit_process.start()
+        _run_streamlit(str(app_path), port)
     except Exception as exc:
-        logger.exception("Failed to start Streamlit process: %s", exc)
+        logger.exception("Failed to start Streamlit: %s", exc)
         _notify_user(f"{APP_NAME} failed to start: {exc}")
         return 1
 
-    if not _wait_for_port(port, STARTUP_TIMEOUT_SECONDS):
-        logger.error("Streamlit did not start within timeout (%ds).", STARTUP_TIMEOUT_SECONDS)
-        streamlit_process.terminate()
-        streamlit_process.join(timeout=3)
-        _notify_user(f"{APP_NAME} failed to start. See launcher log for details.")
-        return 1
-
-    url = f"http://127.0.0.1:{port}"
-    logger.info("Opening browser at %s", url)
-    webbrowser.open(url)
-
-    streamlit_process.join()
-    return streamlit_process.exitcode or 0
+    return 0

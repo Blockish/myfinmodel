@@ -7,6 +7,8 @@ from pathlib import Path
 BASE_DIR = Path(SPECPATH).resolve().parent
 
 
+from PyInstaller.utils.hooks import collect_data_files, copy_metadata
+
 def collect_tree(source_dir: str, destination_root: str) -> list[tuple[str, str]]:
     source_path = BASE_DIR / source_dir
     if not source_path.exists():
@@ -26,6 +28,8 @@ datas = [
     *collect_tree("simulation", "simulation"),
     *collect_tree("ui", "ui"),
     *collect_tree("utils", "utils"),
+    *collect_data_files("streamlit"),
+    *copy_metadata("streamlit"),
 ]
 
 hiddenimports = [
