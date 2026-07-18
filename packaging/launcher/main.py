@@ -141,7 +141,7 @@ def main() -> int:
     # Start browser opener in a background thread
     browser_thread = threading.Thread(
         target=_wait_and_open_browser,
-        args=(port, logger),
+        args=(port, logger, _notify_user),
         daemon=True,
     )
     browser_thread.start()
