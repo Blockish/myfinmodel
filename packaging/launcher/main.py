@@ -135,12 +135,12 @@ def main() -> int:
         return 1
 
     # Start browser opener in a background thread
-    watcher_thread = threading.Thread(
+    browser_thread = threading.Thread(
         target=_wait_and_open_browser,
         args=(port, logger),
         daemon=True,
     )
-    watcher_thread.start()
+    browser_thread.start()
 
     try:
         _run_streamlit(str(app_path), port)
