@@ -61,7 +61,7 @@ def render_scenario_controls() -> None:
             label_visibility="collapsed",
         )
     with c2:
-        save_clicked = st.button("Save", use_container_width=True)
+        save_clicked = st.button("Save", width="stretch")
 
     if save_clicked and name and name.strip():
         inputs = st.session_state.get("_assembled_inputs")
@@ -110,7 +110,7 @@ def render_scenario_controls() -> None:
         if choice != names[0]:
             match = next((s for s in scenarios if s["name"] == choice), None)
             if match:
-                if st.button("Load", use_container_width=True):
+                if st.button("Load", width="stretch"):
                     _restore_inputs(match["inputs"])
                     if match.get("results") is not None:
                         st.session_state["results"] = match["results"]

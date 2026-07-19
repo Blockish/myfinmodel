@@ -275,7 +275,7 @@ def _download_df(df: pd.DataFrame, *, label: str, file_name: str) -> None:
         data=df.to_csv(index=False).encode("utf-8"),
         file_name=file_name,
         mime="text/csv",
-        use_container_width=False,
+        width="content",
     )
 
 
@@ -437,7 +437,7 @@ def render_outputs(results: SimulationResults) -> None:
             help="Off = strict spec row counts. On = include additional spending detail rows.",
         )
         success_df = _success_metrics_table(results, show_extended=show_extended)
-        st.dataframe(success_df, use_container_width=True, hide_index=True)
+        st.dataframe(success_df, width="stretch", hide_index=True)
 
     # Tab 2: Portfolio
     with tab_objects[1]:
@@ -457,7 +457,7 @@ def render_outputs(results: SimulationResults) -> None:
             medicare_age=results.inputs.health.medicare_age,
             title_prefix=prefix,
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     # Tab 3: Spending
     with tab_objects[2]:
@@ -487,7 +487,7 @@ def render_outputs(results: SimulationResults) -> None:
             ss_start_age=results.inputs.ss_start_age if results.inputs.ss_enabled else None,
             medicare_age=results.inputs.health.medicare_age,
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     # Tab 4: Analysis (Guardrails + Inflation)
     with tab_objects[3]:
@@ -499,7 +499,7 @@ def render_outputs(results: SimulationResults) -> None:
             include_none=False,
             include_aca=aca_active,
         )
-        st.plotly_chart(ev_fig, use_container_width=True)
+        st.plotly_chart(ev_fig, width="stretch")
 
         c1, c2 = st.columns([1, 2])
         with c1:
@@ -510,7 +510,7 @@ def render_outputs(results: SimulationResults) -> None:
                 plan_years=results.plan_years,
                 final_age=results.ages[-1],
             )
-            st.plotly_chart(donut, use_container_width=True)
+            st.plotly_chart(donut, width="stretch")
 
         with c2:
             infl = create_inflation_fan_chart(
@@ -520,7 +520,7 @@ def render_outputs(results: SimulationResults) -> None:
                 inf_mean=results.inputs.inf_mean,
                 gr4_inf_trigger=results.inputs.gr4.inf_trigger,
             )
-            st.plotly_chart(infl, use_container_width=True)
+            st.plotly_chart(infl, width="stretch")
             if results.inputs.inf_floor > 0:
                 st.caption(
                     f"Inflation draws are clipped at {results.inputs.inf_floor:.1%}; "
@@ -541,13 +541,13 @@ def render_outputs(results: SimulationResults) -> None:
             mode="fan" if wr_mode == "Fan" else "box",
             ref_lines=(0.04, 0.05, 0.065),
         )
-        st.plotly_chart(wr_fig, use_container_width=True)
+        st.plotly_chart(wr_fig, width="stretch")
 
     # Tab 6: Raw Data
     with tab_objects[5]:
         df1 = _portfolio_percentiles_df(results)
         st.markdown("**Table 1 - Percentile Portfolio Paths**")
-        st.dataframe(_display_df_rounded(df1), use_container_width=True)
+        st.dataframe(_display_df_rounded(df1), width="stretch")
         _download_df(
             df1,
             label="Download CSV - Table 1 Portfolio Paths",
@@ -556,7 +556,7 @@ def render_outputs(results: SimulationResults) -> None:
 
         st.markdown("**Table 2 - Percentile Spending Paths**")
         df2 = _spending_percentiles_df(results)
-        st.dataframe(_display_df_rounded(df2), use_container_width=True)
+        st.dataframe(_display_df_rounded(df2), width="stretch")
         _download_df(
             df2,
             label="Download CSV - Table 2 Spending Paths",
@@ -565,7 +565,7 @@ def render_outputs(results: SimulationResults) -> None:
 
         st.markdown("**Table 3 - Guardrail Event Frequency**")
         df3 = _event_frequency_df(results)
-        st.dataframe(_display_df_rounded(df3), use_container_width=True)
+        st.dataframe(_display_df_rounded(df3), width="stretch")
         _download_df(
             df3,
             label="Download CSV - Table 3 Guardrail Events",
@@ -574,7 +574,7 @@ def render_outputs(results: SimulationResults) -> None:
 
         st.markdown("**Table 4 - Inflation Statistics**")
         df4 = _inflation_stats_df(results)
-        st.dataframe(_display_df_rounded(df4), use_container_width=True)
+        st.dataframe(_display_df_rounded(df4), width="stretch")
         _download_df(
             df4,
             label="Download CSV - Table 4 Inflation Statistics",
@@ -591,7 +591,7 @@ def render_outputs(results: SimulationResults) -> None:
 
         if st.button("Generate Full Path Export", key="outputs_gen_full_export"):
             full_df = _full_path_export_df(results)
-            st.dataframe(_display_df_rounded(full_df.head(500)), use_container_width=True)
+            st.dataframe(_display_df_rounded(full_df.head(500)), width="stretch")
             st.caption("Showing first 500 rows in-app. The CSV download includes all rows.")
             _download_df(
                 full_df,
@@ -659,7 +659,7 @@ def render_outputs(results: SimulationResults) -> None:
                             }
                         )
 
-                st.dataframe(pd.DataFrame(display_rows), use_container_width=True, hide_index=True)
+                st.dataframe(pd.DataFrame(display_rows), width="stretch", hide_index=True)
 
                 # Guard for mismatched horizons between scenarios
                 if a.plan_years != b.plan_years or a.ages[0] != b.ages[0]:
@@ -688,7 +688,7 @@ def render_outputs(results: SimulationResults) -> None:
                                                     min(a.ages[0], b.ages[0]), max(a.ages[-1], b.ages[-1])),
                     },
                 )
-                st.plotly_chart(overlay, use_container_width=True)
+                st.plotly_chart(overlay, width="stretch")
 
     if not include_compare:
         st.caption("Compare tab appears when at least two saved scenarios include results.")

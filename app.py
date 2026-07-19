@@ -111,7 +111,7 @@ with st.sidebar:
     run_clicked = st.button(
         "▶ Run Simulation",
         type="primary",
-        use_container_width=True,
+        width="stretch",
     )
 
     st.divider()
