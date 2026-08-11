@@ -1,6 +1,6 @@
 [project]
 name = "myfinmodel"
-version = "0.1.0"
+version = "1.0.0"
 description = "Monte Carlo retirement spending model Streamlit app"
 readme = "README.md"
 requires-python = ">=3.11"

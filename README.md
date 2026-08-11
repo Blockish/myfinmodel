@@ -39,7 +39,7 @@ Use this path when you want a local, double-click launch experience for Windows 
 From repository root:
 
 ```powershell
-./packaging/build_portable.ps1 -Version "0.1.0"
+./packaging/build_portable.ps1 -Version "1.0.0"
 ```
 
 Expected output:
