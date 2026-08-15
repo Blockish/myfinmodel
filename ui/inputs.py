@@ -222,33 +222,31 @@ def _render_portfolio_section() -> None:
         # Account sum advisory check is handled by validate_inputs() (W1)
         # to avoid duplicate warnings.
 
+        st.session_state.setdefault("unrealized_gain_pct", 30.0)
+        st.session_state.setdefault("ltcg_idx_sel", _LTCG_LABELS[1])
+        st.session_state.setdefault("ord_idx_sel", _ORD_LABELS[2])
         c1, c2, c3 = st.columns(3)
         with c1:
             st.slider(
                 "Unrealized Gain % (Taxable)",
                 min_value=0.0,
                 max_value=100.0,
-                value=st.session_state.get("unrealized_gain_pct", 30.0),
                 step=1.0,
                 format="%.0f%%",
                 key="unrealized_gain_pct",
                 help="Fraction of taxable account representing embedded capital gains.",
             )
         with c2:
-            ltcg_idx = st.session_state.get("ltcg_idx", 1)
             st.selectbox(
                 "LTCG Tax Rate",
                 options=_LTCG_LABELS,
-                index=ltcg_idx,
                 key="ltcg_idx_sel",
                 help="Federal long-term capital gains rate on taxable account.",
             )
         with c3:
-            ord_idx = st.session_state.get("ord_idx", 2)
             st.selectbox(
                 "Ordinary Income Tax Rate",
                 options=_ORD_LABELS,
-                index=ord_idx,
                 key="ord_idx_sel",
                 help="Marginal rate applied to IRA/401k withdrawals.",
             )
@@ -256,13 +254,18 @@ def _render_portfolio_section() -> None:
 
 def _render_personal_section() -> None:
     with st.expander("👤 Personal Information", expanded=True):
+        st.session_state.setdefault("current_age", 65)
+        st.session_state.setdefault("retire_age", 65)
+        st.session_state.setdefault("filing_status", "Single")
+        st.session_state.setdefault("ss_start_age", 67)
+        st.session_state.setdefault("plan_years", 35)
+
         c1, c2, c3 = st.columns(3)
         with c1:
             st.number_input(
                 "Current Age",
                 min_value=18,
                 max_value=85,
-                value=st.session_state.get("current_age", 65),
                 step=1,
                 key="current_age",
             )
@@ -271,7 +274,6 @@ def _render_personal_section() -> None:
                 "Retirement Start Age",
                 min_value=18,
                 max_value=85,
-                value=st.session_state.get("retire_age", 65),
                 step=1,
                 key="retire_age",
                 help="Age at which portfolio withdrawals begin.",
@@ -280,7 +282,6 @@ def _render_personal_section() -> None:
             st.selectbox(
                 "Filing Status",
                 options=["Single", "Married Filing Jointly"],
-                index=0 if st.session_state.get("filing_status", "Single") == "Single" else 1,
                 key="filing_status",
             )
 
@@ -290,7 +291,6 @@ def _render_personal_section() -> None:
                 "Social Security Start Age",
                 min_value=62,
                 max_value=70,
-                value=st.session_state.get("ss_start_age", 67),
                 step=1,
                 key="ss_start_age",
                 help="62 = reduced benefit, 67 = FRA, 70 = maximum delayed.",
@@ -300,7 +300,6 @@ def _render_personal_section() -> None:
                 "Planning Horizon (years)",
                 min_value=5,
                 max_value=50,
-                value=st.session_state.get("plan_years", 35),
                 step=1,
                 key="plan_years",
             )
@@ -396,13 +395,14 @@ def _render_spending_section() -> None:
 
 def _render_social_security_section() -> None:
     with st.expander("🏛 Social Security", expanded=False):
+        st.session_state.setdefault("ss_enabled", True)
         ss_enabled = st.toggle(
             "Enable Social Security",
-            value=st.session_state.get("ss_enabled", True),
             key="ss_enabled",
         )
 
         if ss_enabled:
+            st.session_state.setdefault("ss_cola", 2.5)
             c1, c2 = st.columns(2)
             with c1:
                 _money_input(
@@ -418,7 +418,6 @@ def _render_social_security_section() -> None:
                     "SS COLA Rate (%)",
                     min_value=0.0,
                     max_value=5.0,
-                    value=st.session_state.get("ss_cola", 2.5),
                     step=0.1,
                     format="%.1f%%",
                     key="ss_cola",
@@ -428,13 +427,14 @@ def _render_social_security_section() -> None:
 
 def _render_health_insurance_section() -> None:
     with st.expander("🏥 Health Insurance", expanded=False):
+        st.session_state.setdefault("medicare_age", 65)
+        st.session_state.setdefault("aca_guardrail_enabled", True)
         c1, c2 = st.columns(2)
         with c1:
             st.number_input(
                 "Medicare Start Age",
                 min_value=60,
                 max_value=70,
-                value=st.session_state.get("medicare_age", 65),
                 step=1,
                 key="medicare_age",
             )
@@ -450,7 +450,6 @@ def _render_health_insurance_section() -> None:
 
         aca_enabled = st.toggle(
             "Enable ACA MAGI Guardrail",
-            value=st.session_state.get("aca_guardrail_enabled", True),
             key="aca_guardrail_enabled",
         )
 
@@ -493,14 +492,13 @@ def _render_health_insurance_section() -> None:
 def _render_market_section() -> None:
     with st.expander("📊 Portfolio Style / Market Assumptions", expanded=False):
         preset_names = list(_PRESETS.keys())
+        st.session_state.setdefault("preset_sel", preset_names[2])
         preset = st.selectbox(
             "Portfolio Style Preset",
             options=preset_names,
-            index=st.session_state.get("preset_idx", 2),
             key="preset_sel",
             help="Selecting a preset auto-fills return and volatility sliders.",
         )
-        st.session_state["preset_idx"] = preset_names.index(preset)
         desc = _PRESET_DESCRIPTIONS[preset]
         st.info(
             f"**{preset}** — {desc}\n\n"
@@ -511,21 +509,22 @@ def _render_market_section() -> None:
         # Auto-fill from preset: only apply when the preset selection changes,
         # so manual slider adjustments are preserved across reruns.
         p = _PRESETS[preset]
+        st.session_state.setdefault("ret_mean_pct", 6.5)
+        st.session_state.setdefault("ret_std_pct", 12.0)
         prev_preset = st.session_state.get("_prev_preset")
         if preset != "Custom" and preset != prev_preset:
             st.session_state["ret_mean_pct"] = p["ret_mean"] * 100
             st.session_state["ret_std_pct"] = p["ret_std"] * 100
         st.session_state["_prev_preset"] = preset
-        default_ret = st.session_state.get("ret_mean_pct", 6.5)
-        default_std = st.session_state.get("ret_std_pct", 12.0)
 
+        # Don't pass value= here: the key already tracks session_state, and
+        # doing both triggers Streamlit's "default value + Session State API" warning.
         c1, c2 = st.columns(2)
         with c1:
             st.slider(
                 "Expected Annual Return (%)",
                 min_value=1.0,
                 max_value=15.0,
-                value=default_ret,
                 step=0.1,
                 format="%.1f%%",
                 key="ret_mean_pct",
@@ -535,17 +534,23 @@ def _render_market_section() -> None:
                 "Return Standard Deviation (%)",
                 min_value=1.0,
                 max_value=30.0,
-                value=default_std,
                 step=0.1,
                 format="%.1f%%",
                 key="ret_std_pct",
             )
 
+        st.session_state.setdefault("ret_inf_corr", 0.10)
+        st.session_state.setdefault("inf_mean_pct", 3.0)
+        st.session_state.setdefault("inf_std_pct", 1.5)
+        st.session_state.setdefault("inf_floor_pct", 1.0)
+        st.session_state.setdefault("n_paths", 1_000)
+        st.session_state.setdefault("lock_seed", False)
+        st.session_state.setdefault("random_seed", 42)
+
         st.slider(
             "Return–Inflation Correlation",
             min_value=-0.50,
             max_value=0.80,
-            value=st.session_state.get("ret_inf_corr", 0.10),
             step=0.01,
             format="%.2f",
             key="ret_inf_corr",
@@ -557,7 +562,6 @@ def _render_market_section() -> None:
                 "Inflation Mean (%)",
                 min_value=0.0,
                 max_value=10.0,
-                value=st.session_state.get("inf_mean_pct", 3.0),
                 step=0.1,
                 format="%.1f%%",
                 key="inf_mean_pct",
@@ -567,7 +571,6 @@ def _render_market_section() -> None:
                 "Inflation Std Dev (%)",
                 min_value=0.0,
                 max_value=5.0,
-                value=st.session_state.get("inf_std_pct", 1.5),
                 step=0.1,
                 format="%.1f%%",
                 key="inf_std_pct",
@@ -577,7 +580,6 @@ def _render_market_section() -> None:
                 "Inflation Floor (%)",
                 min_value=0.0,
                 max_value=10.0,
-                value=st.session_state.get("inf_floor_pct", 1.0),
                 step=0.1,
                 format="%.1f%%",
                 key="inf_floor_pct",
@@ -590,14 +592,12 @@ def _render_market_section() -> None:
                 "Simulation Paths",
                 min_value=100,
                 max_value=10_000,
-                value=st.session_state.get("n_paths", 1_000),
                 step=100,
                 key="n_paths",
             )
         with c2:
             lock_seed = st.toggle(
                 "Lock random seed",
-                value=st.session_state.get("lock_seed", False),
                 key="lock_seed",
                 help="When off, a new random seed is chosen each run. Turn on to fix the seed for reproducible results.",
             )
@@ -606,7 +606,6 @@ def _render_market_section() -> None:
                     "Random Seed",
                     min_value=0,
                     max_value=999_999,
-                    value=st.session_state.get("random_seed", 42),
                     step=1,
                     key="random_seed",
                 )
@@ -617,17 +616,18 @@ def _render_guardrail_section() -> None:
 
         # ── Inflation Guardrail ───────────────────────────────────────────
         st.markdown("---")
+        st.session_state.setdefault("gr4_enabled", True)
         inf_enabled = st.toggle(
             "**Inflation Guardrail**",
-            value=st.session_state.get("gr4_enabled", True),
             key="gr4_enabled",
         )
         if inf_enabled:
+            st.session_state.setdefault("gr4_inf_trigger", 4.5)
+            st.session_state.setdefault("gr4_cut_pct", 5.0)
             st.slider(
                 "Inflation Trigger Rate (%)",
                 min_value=2.0,
                 max_value=10.0,
-                value=st.session_state.get("gr4_inf_trigger", 4.5),
                 step=0.1,
                 format="%.1f%%",
                 key="gr4_inf_trigger",
@@ -636,7 +636,6 @@ def _render_guardrail_section() -> None:
                 "Spending Cut %",
                 min_value=2.0,
                 max_value=20.0,
-                value=st.session_state.get("gr4_cut_pct", 5.0),
                 step=0.5,
                 format="%.1f%%",
                 key="gr4_cut_pct",
@@ -644,19 +643,22 @@ def _render_guardrail_section() -> None:
 
         # ── Portfolio Value Guardrail ─────────────────────────────────────
         st.markdown("---")
+        st.session_state.setdefault("gr1_enabled", True)
         pv_enabled = st.toggle(
             "**Portfolio Value Guardrail**",
-            value=st.session_state.get("gr1_enabled", True),
             key="gr1_enabled",
         )
         if pv_enabled:
+            st.session_state.setdefault("gr1_floor_pct", 50.0)
+            st.session_state.setdefault("gr1_ceil_pct", 150.0)
+            st.session_state.setdefault("gr1_cut_pct", 10.0)
+            st.session_state.setdefault("gr1_raise_pct", 10.0)
             c1, c2 = st.columns(2)
             with c1:
                 st.slider(
                     "Portfolio Floor (% of starting portfolio)",
                     min_value=10.0,
                     max_value=90.0,
-                    value=st.session_state.get("gr1_floor_pct", 50.0),
                     step=1.0,
                     format="%.0f%%",
                     key="gr1_floor_pct",
@@ -666,7 +668,6 @@ def _render_guardrail_section() -> None:
                     "Portfolio Ceiling (% of starting portfolio)",
                     min_value=110.0,
                     max_value=300.0,
-                    value=st.session_state.get("gr1_ceil_pct", 150.0),
                     step=5.0,
                     format="%.0f%%",
                     key="gr1_ceil_pct",
@@ -677,7 +678,6 @@ def _render_guardrail_section() -> None:
                     "Spending Cut %",
                     min_value=5.0,
                     max_value=30.0,
-                    value=st.session_state.get("gr1_cut_pct", 10.0),
                     step=1.0,
                     format="%.0f%%",
                     key="gr1_cut_pct",
@@ -687,7 +687,6 @@ def _render_guardrail_section() -> None:
                     "Spending Raise %",
                     min_value=5.0,
                     max_value=30.0,
-                    value=st.session_state.get("gr1_raise_pct", 10.0),
                     step=1.0,
                     format="%.0f%%",
                     key="gr1_raise_pct",
@@ -695,19 +694,24 @@ def _render_guardrail_section() -> None:
 
         # ── Withdrawal Rate Guardrail ─────────────────────────────────────
         st.markdown("---")
+        st.session_state.setdefault("gr2_enabled", True)
         wr_enabled = st.toggle(
             "**Withdrawal Rate Guardrail**",
-            value=st.session_state.get("gr2_enabled", True),
             key="gr2_enabled",
         )
         if wr_enabled:
+            st.session_state.setdefault("gr2_low_rate", 3.0)
+            st.session_state.setdefault("gr2_warn_rate", 5.0)
+            st.session_state.setdefault("gr2_crit_rate", 6.5)
+            st.session_state.setdefault("gr2_low_raise", 5.0)
+            st.session_state.setdefault("gr2_warn_cut", 5.0)
+            st.session_state.setdefault("gr2_crit_cut", 15.0)
             c1, c2, c3 = st.columns(3)
             with c1:
                 st.slider(
                     "Low Rate (%)",
                     min_value=1.0,
                     max_value=8.0,
-                    value=st.session_state.get("gr2_low_rate", 3.0),
                     step=0.1,
                     format="%.1f%%",
                     key="gr2_low_rate",
@@ -717,7 +721,6 @@ def _render_guardrail_section() -> None:
                     "Warning Rate (%)",
                     min_value=3.0,
                     max_value=8.0,
-                    value=st.session_state.get("gr2_warn_rate", 5.0),
                     step=0.1,
                     format="%.1f%%",
                     key="gr2_warn_rate",
@@ -727,7 +730,6 @@ def _render_guardrail_section() -> None:
                     "Critical Rate (%)",
                     min_value=3.0,
                     max_value=12.0,
-                    value=st.session_state.get("gr2_crit_rate", 6.5),
                     step=0.1,
                     format="%.1f%%",
                     key="gr2_crit_rate",
@@ -738,7 +740,6 @@ def _render_guardrail_section() -> None:
                     "Low — raise spending (%)",
                     min_value=2.0,
                     max_value=20.0,
-                    value=st.session_state.get("gr2_low_raise", 5.0),
                     step=0.5,
                     format="%.1f%%",
                     key="gr2_low_raise",
@@ -748,7 +749,6 @@ def _render_guardrail_section() -> None:
                     "Warn — cut spending (%)",
                     min_value=2.0,
                     max_value=20.0,
-                    value=st.session_state.get("gr2_warn_cut", 5.0),
                     step=0.5,
                     format="%.1f%%",
                     key="gr2_warn_cut",
@@ -758,7 +758,6 @@ def _render_guardrail_section() -> None:
                     "Critical — cut spending (%)",
                     min_value=5.0,
                     max_value=40.0,
-                    value=st.session_state.get("gr2_crit_cut", 15.0),
                     step=0.5,
                     format="%.1f%%",
                     key="gr2_crit_cut",
@@ -768,9 +767,9 @@ def _render_guardrail_section() -> None:
         aca_on = st.session_state.get("aca_guardrail_enabled", True)
         if aca_on:
             st.markdown("---")
+            st.session_state.setdefault("gr3_enabled", True)
             st.toggle(
                 "**ACA MAGI Guardrail**",
-                value=st.session_state.get("gr3_enabled", True),
                 key="gr3_enabled",
                 help="Conditional on ACA guardrail being enabled in Health Insurance section.",
             )
